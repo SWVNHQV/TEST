@@ -75,6 +75,13 @@ st.markdown("""
 .workflow-step strong{font-size:.88rem;color:#273249}
 .workflow-arrow{color:#98a2b3;font-weight:800}
 
+
+.overview-note{background:#eef4ff;border:1px solid #d7e3f7;border-radius:14px;padding:12px 15px;color:#52627a;font-size:.86rem;margin:4px 0 18px}
+.priority-strip{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 15px;color:#52627a;font-size:.88rem;box-shadow:0 3px 12px rgba(15,30,60,.035)}
+.priority-strip.ok{background:#eefaf2;border-color:#ccebd7;color:#28633f}
+.priority-label{font-weight:800;color:#253047}.priority-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 5px 1px 2px}.priority-dot.red{background:#df4b45}.priority-dot.amber{background:#e3a629}.priority-dot.blue{background:#4c78c2}.priority-sep{color:#c3cad5}
+.rca-header{display:flex;justify-content:space-between;align-items:center;gap:20px;background:#fff;border:1px solid #e1e7f0;border-radius:16px;padding:16px 18px;margin:8px 0 12px}.rca-kicker{font-size:.68rem;font-weight:800;letter-spacing:.08em;color:#7a8495}.rca-title{font-size:1.35rem;font-weight:850;color:#182235;line-height:1.15;margin-top:3px}.rca-material{font-size:.86rem;color:#697386;margin-top:4px}.rca-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.severity-pill,.impact-pill{border-radius:999px;padding:6px 10px;font-size:.78rem;font-weight:800}.severity-pill.critical{background:#ffe8e7;color:#b42318}.severity-pill.high{background:#fff3d8;color:#8a5a00}.severity-pill.medium{background:#eef4ff;color:#315c9d}.impact-pill{background:#f2f4f7;color:#4b5565}.rca-finding{margin-bottom:14px;padding:15px 17px !important;line-height:1.5}.ai-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#6f42c1;margin-bottom:5px}.compact-action{padding:11px 13px !important;font-size:.88rem;line-height:1.4}
+
 /* Existing components */
 .card{background:white;border:1px solid #e4e8ef;border-radius:18px;padding:18px;box-shadow:0 5px 20px rgba(15,30,60,.05)}
 .kpi{font-size:1.75rem;font-weight:800}.muted{color:#697386;font-size:.86rem}
@@ -311,46 +318,24 @@ for col, (tone, icon, label, value, desc) in zip(overview_cols, overview_cards):
 
 st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-health_cols = st.columns(4)
-health_cards = [
-    ("dot-red", "Critical RCA cases", critical_count, "Highest-priority correlated cases"),
-    ("dot-amber", "High RCA cases", high_count, "Cases requiring prompt review"),
-    ("dot-blue", "Pending approval", pending, "Human decisions waiting in the queue"),
-    ("dot-green", "LLM status", "Ready" if enabled() else "Fallback", "AI explanation service"),
-]
-for col, (dot, title, value, desc) in zip(health_cols, health_cards):
-    with col:
-        st.markdown(
-            f"""
-            <div class="health-card">
-                <div class="health-title"><span class="health-dot {dot}"></span>{title}</div>
-                <div class="big">{value}</div>
-                <div class="small">{desc}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+priority_items = []
+if critical_count:
+    priority_items.append(f"<span class='priority-dot red'></span><b>{critical_count}</b> Critical")
+if high_count:
+    priority_items.append(f"<span class='priority-dot amber'></span><b>{high_count}</b> High")
+if pending:
+    priority_items.append(f"<span class='priority-dot blue'></span><b>{pending}</b> Pending approval")
+if priority_items:
+    st.markdown(f"<div class='priority-strip'><span class='priority-label'>Needs attention</span>{'<span class=\"priority-sep\"> · </span>'.join(priority_items)}</div>", unsafe_allow_html=True)
+else:
+    st.markdown("<div class='priority-strip ok'><span class='priority-label'>Status</span><b>All clear</b> · No critical/high RCA cases or pending approvals</div>", unsafe_allow_html=True)
 
 st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-st.markdown("**Control-tower workflow**", unsafe_allow_html=True)
-st.markdown(
-    """
-    <div class="workflow">
-        <div class="workflow-step"><span class="num">1</span><strong>Detect</strong></div>
-        <span class="workflow-arrow">→</span>
-        <div class="workflow-step"><span class="num">2</span><strong>Correlate</strong></div>
-        <span class="workflow-arrow">→</span>
-        <div class="workflow-step"><span class="num">3</span><strong>Explain</strong></div>
-        <span class="workflow-arrow">→</span>
-        <div class="workflow-step"><span class="num">4</span><strong>Assess impact</strong></div>
-        <span class="workflow-arrow">→</span>
-        <div class="workflow-step"><span class="num">5</span><strong>Approve</strong></div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+st.markdown("""
+<div class="overview-note">
+<b>Next:</b> use <b>Control Tower</b> to review issues, <b>Root Cause AI</b> to understand a case, and <b>Approvals</b> when a decision is required.
+</div>
+""", unsafe_allow_html=True)
 
 # Compact navigation context
 st.markdown(
@@ -524,39 +509,56 @@ with tabs[1]:
 
 with tabs[2]:
     st.subheader("AI Root Cause Analysis")
-    st.caption("Cross-system evidence → root cause → impact → recommended corrective action")
+    st.caption("Decision-focused view — only the evidence needed to understand and act on the selected case.")
+
     if cases.empty:
-        st.info("No cases available.")
+        st.info("No correlated cases available.")
     else:
-        labels=[f"{r.case_id} · {r.material} · {r.severity} · {r.impact_score}/100" for _,r in cases.iterrows()]
-        idx=st.selectbox("Choose a correlated case",range(len(labels)),format_func=lambda i:labels[i])
-        case=cases.iloc[idx].to_dict()
-        st.markdown(f"### {case['case_id']} — {case['material']}")
-        st.markdown(f"**{case['severity']} · Impact {case['impact_score']}/100**")
-        st.markdown("<div class='chain'>"+
-                    "<span class='node'>Material Master</span><span class='arrow'>→</span>"+
-                    "<span class='node'>Inventory</span><span class='arrow'>→</span>"+
-                    "<span class='node'>Warehouse Bin</span><span class='arrow'>→</span>"+
-                    "<span class='node'>Delivery</span><span class='arrow'>→</span>"+
-                    "<span class='node'>Purchase Order</span><span class='arrow'>→</span>"+
-                    "<span class='node'>Vendor</span><span class='arrow'>→</span>"+
-                    "<span class='node'>Root Cause</span></div>",unsafe_allow_html=True)
+        labels = [f"{r.case_id} · {r.material} · {r.severity} · {r.impact_score}/100" for _, r in cases.iterrows()]
+        idx = st.selectbox("Case", range(len(labels)), format_func=lambda i: labels[i], key="rca_case_select")
+        case = cases.iloc[idx].to_dict()
+        cid = str(case.get("case_id", ""))
+        severity = str(case.get("severity", "Unknown"))
+        sev_class = "critical" if severity.lower() == "critical" else "high" if severity.lower() == "high" else "medium"
 
-        st.markdown(f"<div class='ai'><b>Evidence-grounded finding</b><br>{case['root_cause']}</div>",unsafe_allow_html=True)
-        if st.button("Generate AI Root Cause Explanation",type="primary"):
-            with st.spinner("AI is synthesizing the correlated evidence..."):
-                st.session_state.ai_cache[case["case_id"]]=generate_root_cause(case)
-        if case["case_id"] in st.session_state.ai_cache:
-            st.markdown(st.session_state.ai_cache[case["case_id"]])
+        st.markdown(f"""
+        <div class='rca-header'>
+          <div><div class='rca-kicker'>CASE</div><div class='rca-title'>{cid}</div><div class='rca-material'>{case.get('material','')}</div></div>
+          <div class='rca-meta'><span class='severity-pill {sev_class}'>{severity}</span><span class='impact-pill'>Impact {case.get('impact_score',0)}/100</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"<div class='ai rca-finding'><div class='ai-label'>Root cause</div>{case.get('root_cause','No root-cause explanation available.')}</div>", unsafe_allow_html=True)
+
+        signals = case.get("signals", [])
+        if isinstance(signals, (list, tuple)):
+            signals = [str(x) for x in signals if str(x).strip()]
+        elif str(signals).strip():
+            signals = [str(signals)]
         else:
-            st.caption("Click the button to have the LLM write the operator-facing explanation from the structured evidence.")
+            signals = []
 
-        st.subheader("Evidence from every connected sheet")
-        for sheet, records in case["evidence"].items():
-            with st.expander(f"{sheet} · {len(records)} linked records"):
-                st.dataframe(pd.DataFrame(records),width="stretch",hide_index=True)
+        if signals:
+            st.markdown("**Key evidence**")
+            for signal in signals[:4]:
+                st.markdown(f"• {signal}")
 
-        st.markdown(f"<div class='good'><b>Proposed action:</b> {case['recommended_action']}</div>",unsafe_allow_html=True)
+        st.markdown("**Recommended action**")
+        st.markdown(f"<div class='good compact-action'>{case.get('recommended_action','Review the linked records before corrective action.')}</div>", unsafe_allow_html=True)
+
+        if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}"):
+            with st.spinner("AI is synthesizing the case evidence..."):
+                st.session_state.ai_cache[cid] = generate_root_cause(case)
+        if cid in st.session_state.ai_cache:
+            st.markdown(st.session_state.ai_cache[cid])
+
+        evidence = case.get("evidence", {}) or {}
+        nonempty_evidence = [(sheet, records) for sheet, records in evidence.items() if records]
+        if nonempty_evidence:
+            with st.expander(f"Supporting records · {sum(len(records) for _, records in nonempty_evidence)} linked rows"):
+                for sheet, records in nonempty_evidence:
+                    st.markdown(f"**{sheet}** · {len(records)} rows")
+                    st.dataframe(pd.DataFrame(records), width="stretch", hide_index=True)
 
 with tabs[3]:
     st.subheader("Relationship Trace Graph")
