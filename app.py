@@ -1,4 +1,4 @@
-
+\
 from __future__ import annotations
 import os, json
 import base64
@@ -118,21 +118,60 @@ div[data-baseweb="tab-list"]{
     gap:6px;background:#e9eef6;padding:6px;border-radius:15px;
     border:1px solid #dde4ee
 }
+/* Color-coded application tabs */
 button[data-baseweb="tab"]{
-    border-radius:11px !important;
-    padding:9px 13px !important;
-    font-weight:700 !important;
-    font-size:.94rem !important;
-    color:#243b63 !important;
-    border:1px solid transparent !important;
-    background:rgba(255,255,255,.28) !important;
+    min-height:46px !important;
+    height:46px !important;
+    padding:7px 13px !important;
+    margin:0 3px !important;
+    border-radius:12px !important;
+    font-size:15px !important;
+    font-weight:650 !important;
+    letter-spacing:.05px !important;
+    color:#29415f !important;
+    background:rgba(255,255,255,.78) !important;
+    border:1px solid #d5dfec !important;
+    box-shadow:0 2px 7px rgba(23,55,91,.06) !important;
     white-space:nowrap !important;
+    transition:all .18s ease !important;
+}
+button[data-baseweb="tab"]:nth-child(1){
+    border-top:3px solid #2878d0 !important;
+}
+button[data-baseweb="tab"]:nth-child(2){
+    border-top:3px solid #159a72 !important;
+}
+button[data-baseweb="tab"]:nth-child(3){
+    border-top:3px solid #7b4bc4 !important;
+}
+button[data-baseweb="tab"]:nth-child(4){
+    border-top:3px solid #0b82c9 !important;
+}
+button[data-baseweb="tab"]:nth-child(5){
+    border-top:3px solid #18a66b !important;
+}
+button[data-baseweb="tab"]:nth-child(6){
+    border-top:3px solid #d58a16 !important;
+}
+button[data-baseweb="tab"]:nth-child(7){
+    border-top:3px solid #3d65a6 !important;
+}
+button[data-baseweb="tab"]:nth-child(8){
+    border-top:3px solid #64748b !important;
 }
 button[data-baseweb="tab"][aria-selected="true"]{
-    background:rgba(255,255,255,.97) !important;
-    color:#0b4fa3 !important;
-    border-color:#cbd8ea !important;
-    box-shadow:0 3px 10px rgba(20,45,85,.10);
+    color:#123b72 !important;
+    background:rgba(255,255,255,.98) !important;
+    border-color:#b9cbe0 !important;
+    box-shadow:0 5px 14px rgba(20,55,95,.13) !important;
+    font-weight:800 !important;
+    transform:translateY(-1px);
+}
+button[data-baseweb="tab"]:hover{
+    color:#123b72 !important;
+    background:rgba(255,255,255,.94) !important;
+    border-color:#a9bfd9 !important;
+    box-shadow:0 4px 12px rgba(20,55,95,.11) !important;
 }
 button[data-baseweb="tab"]:hover{color:#ffffff !important;background:#f8fafc !important}
 button[data-baseweb="tab"] span{font-size:.95rem}
@@ -825,3 +864,17 @@ with tabs[7]:
         st.dataframe(pd.DataFrame(st.session_state.audit),width="stretch",hide_index=True)
     else:
         st.info("No human decisions recorded in this session.")
+<style>
+div[data-baseweb="tab-list"]{
+    gap:4px !important;
+    align-items:center !important;
+    padding:5px 3px !important;
+}
+@media (max-width: 1100px){
+    button[data-baseweb="tab"]{
+        font-size:13px !important;
+        padding:6px 9px !important;
+        margin:0 1px !important;
+    }
+}
+</style>
