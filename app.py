@@ -119,48 +119,36 @@ div[data-baseweb="tab-list"]{
     border:1px solid #dde4ee
 }
 button[data-baseweb="tab"]{
-    border-radius:11px !important;padding:9px 13px !important;
-    font-weight:700 !important;color:#4f5b70 !important;
-    border:1px solid transparent !important;background:transparent !important;
-    display:flex !important;align-items:center !important;gap:7px !important;
-}
-button[data-baseweb="tab"]::before{
-    content:"";display:inline-block;width:21px;height:21px;flex:0 0 21px;
-    background-repeat:no-repeat;background-position:center;background-size:19px 19px;
-    opacity:.86;
-}
-button[data-baseweb="tab"]:nth-child(1)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23235aa6' stroke-width='2'%3E%3Cpath d='M3 11.5 12 4l9 7.5'/%3E%3Cpath d='M5 10v10h14V10M9 20v-6h6v6'/%3E%3C/svg%3E");
-}
-button[data-baseweb="tab"]:nth-child(2)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23235aa6' stroke-width='2'%3E%3Cpath d='M4 19V5h16v14z'/%3E%3Cpath d='M7 15h2v2H7zm4-5h2v7h-2zm4-3h2v10h-2z'/%3E%3C/svg%3E");
-}
-button[data-baseweb="tab"]:nth-child(3)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236f42c1' stroke-width='2'%3E%3Cpath d='M9 4a3 3 0 0 1 6 0v2a4 4 0 0 1 0 8v2a3 3 0 0 1-6 0v-2a4 4 0 0 1 0-8z'/%3E%3Cpath d='M6 9h3m6 0h3M6 15h3m6 0h3'/%3E%3C/svg%3E");
-}
-button[data-baseweb="tab"]:nth-child(4)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b72c9' stroke-width='2'%3E%3Ccircle cx='5' cy='12' r='2'/%3E%3Ccircle cx='19' cy='6' r='2'/%3E%3Ccircle cx='19' cy='18' r='2'/%3E%3Cpath d='m7 11 10-4M7 13l10 4'/%3E%3C/svg%3E");
-}
-button[data-baseweb="tab"]:nth-child(5)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f8b5b' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='4'/%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
-}
-button[data-baseweb="tab"]:nth-child(6)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b72c9' stroke-width='2'%3E%3Cpath d='M6 8h12a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H9l-4 3v-6a3 3 0 0 1-2-3v-1a3 3 0 0 1 3-3z'/%3E%3Ccircle cx='8' cy='13' r='1' fill='%230b72c9'/%3E%3Ccircle cx='12' cy='13' r='1' fill='%230b72c9'/%3E%3Ccircle cx='16' cy='13' r='1' fill='%230b72c9'/%3E%3C/svg%3E");
-}
-button[data-baseweb="tab"]:nth-child(7)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b63a3' stroke-width='2'%3E%3Cellipse cx='12' cy='5' rx='8' ry='3'/%3E%3Cpath d='M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7'/%3E%3C/svg%3E");
-}
-button[data-baseweb="tab"]:nth-child(8)::before{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6577' stroke-width='2'%3E%3Cpath d='M7 3h8l4 4v14H7z'/%3E%3Cpath d='M15 3v5h4M10 13h6M10 17h6'/%3E%3C/svg%3E");
+    border-radius:11px !important;
+    padding:9px 13px !important;
+    font-weight:700 !important;
+    font-size:.94rem !important;
+    color:#243b63 !important;
+    border:1px solid transparent !important;
+    background:rgba(255,255,255,.28) !important;
+    white-space:nowrap !important;
 }
 button[data-baseweb="tab"][aria-selected="true"]{
-    background:rgba(255,255,255,.96) !important;color:#173d78 !important;
-    border-color:#d5deeb !important;box-shadow:0 3px 10px rgba(20,45,85,.08)
+    background:rgba(255,255,255,.97) !important;
+    color:#0b4fa3 !important;
+    border-color:#cbd8ea !important;
+    box-shadow:0 3px 10px rgba(20,45,85,.10);
 }
 button[data-baseweb="tab"]:hover{color:#173d78 !important;background:#f8fafc !important}
 button[data-baseweb="tab"] span{font-size:.95rem}
 button[data-baseweb="tab"] p{display:flex;align-items:center;gap:6px}
 div[data-baseweb="tab-highlight"]{background:#2b63b7 !important;height:3px !important}
+/* Readability on warehouse background */
+.stMarkdown, .stCaption, label, [data-testid="stMetricLabel"]{
+    color:#334563 !important;
+}
+[data-testid="stMetricValue"]{
+    color:#102d57 !important;
+}
+h1,h2,h3,h4{
+    color:#102d57 !important;
+}
+
 
 .workspace-hint{display:flex;align-items:center;gap:9px;color:#68758a;font-size:.86rem;margin:4px 0 8px;padding-left:2px}.workspace-hint span{font-size:1rem}
 
@@ -403,14 +391,14 @@ st.markdown(
 )
 
 tabs=st.tabs([
-    "Overview",
-    "Control Tower",
-    "Root Cause AI",
-    "Trace Graph",
-    "Approvals",
-    "Copilot",
-    "Data Explorer",
-    "Audit",
+    "🏠  Overview",
+    "📊  Control Tower",
+    "🧠  Root Cause AI",
+    "🔗  Trace Graph",
+    "✅  Approvals",
+    "💬  Copilot",
+    "🗄️  Data Explorer",
+    "🧾  Audit",
 ])
 
 with tabs[0]:
