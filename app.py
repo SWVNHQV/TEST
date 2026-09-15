@@ -217,24 +217,6 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 </style>
 """.replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-div[data-baseweb="tab-list"]{
-    gap:4px !important;
-    align-items:center !important;
-    padding:5px 3px !important;
-}
-@media (max-width: 1100px){
-    button[data-baseweb="tab"]{
-        font-size:13px !important;
-        padding:6px 9px !important;
-        margin:0 1px !important;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
-
 if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
 if "ai_cache" not in st.session_state: st.session_state.ai_cache={}
@@ -882,3 +864,17 @@ with tabs[7]:
         st.dataframe(pd.DataFrame(st.session_state.audit),width="stretch",hide_index=True)
     else:
         st.info("No human decisions recorded in this session.")
+<style>
+div[data-baseweb="tab-list"]{
+    gap:4px !important;
+    align-items:center !important;
+    padding:5px 3px !important;
+}
+@media (max-width: 1100px){
+    button[data-baseweb="tab"]{
+        font-size:13px !important;
+        padding:6px 9px !important;
+        margin:0 1px !important;
+    }
+}
+</style>
