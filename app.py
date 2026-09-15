@@ -11,6 +11,19 @@ from llm import generate_root_cause, copilot_answer, copilot_workbook_answer, en
 
 st.set_page_config(page_title="IntelliWarehouse AI Control Tower", page_icon="◈", layout="wide")
 
+# Local warehouse image used as a compact visual element inside the app.
+BG_PATH = Path(__file__).parent / "bg.jpeg"
+
+def show_warehouse_image(caption=None):
+    """Render the repository-local warehouse image using Streamlit's image element."""
+    if BG_PATH.exists():
+        st.image(
+            str(BG_PATH),
+            caption=caption,
+            use_container_width=True,
+        )
+
+
 st.markdown("""
 <style>
 /* Warehouse image background - expects bg.jpeg beside app.py */
@@ -378,6 +391,27 @@ tabs=st.tabs([
 with tabs[0]:
     st.subheader("Control Tower Overview")
     st.caption("Start with the health picture, then move into the investigation workflow.")
+
+    # Small visual anchor — the warehouse image is shown with Streamlit itself,
+    # while the dashboard data remains the primary focus.
+    img_col, context_col = st.columns([1.15, 1.85])
+    with img_col:
+        show_warehouse_image("Warehouse operations")
+    with context_col:
+        st.markdown(
+            f"""
+            <div class="card" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:.78rem;color:#667085;font-weight:700;letter-spacing:.04em">WAREHOUSE CONTEXT</div>
+                <div style="font-size:1.35rem;font-weight:800;margin:6px 0 8px">Operations at a glance</div>
+                <div style="color:#697386;font-size:.9rem;line-height:1.55">
+                    The control tower connects physical warehouse activity with inventory,
+                    deliveries, replenishment, supplier and data-quality signals.
+                    <b>{len(cases)}</b> correlated cases are currently in scope.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     c1, c2, c3 = st.columns(3)
     with c1:
