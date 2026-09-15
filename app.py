@@ -13,10 +13,69 @@ st.set_page_config(page_title="IntelliWarehouse AI Control Tower", page_icon="�
 
 st.markdown("""
 <style>
-.stApp{background:#f5f7fb}
-.block-container{max-width:1500px;padding-top:1.2rem}
-.hero{background:linear-gradient(135deg,#0b1f44,#234a91);color:white;border-radius:24px;padding:28px 32px;margin-bottom:18px}
-.hero h1{font-size:2.3rem;margin:0}.hero p{opacity:.85;margin:.35rem 0 0}
+.stApp{background:#f4f7fb}
+.block-container{max-width:1500px;padding-top:1.1rem;padding-bottom:3rem}
+
+/* Hero */
+.hero{
+    background:linear-gradient(135deg,#081b3a 0%,#12366d 52%,#2459a8 100%);
+    color:white;border-radius:24px;padding:30px 34px;margin-bottom:18px;
+    box-shadow:0 12px 30px rgba(8,27,58,.16)
+}
+.hero h1{font-size:2.35rem;margin:0;font-weight:800;letter-spacing:-.02em}
+.hero p{opacity:.82;margin:.45rem 0 0;font-size:1.02rem}
+
+/* Overview */
+.section-title{font-size:1.45rem;font-weight:800;color:#172033;margin:4px 0 2px}
+.section-subtitle{color:#697386;margin-bottom:16px}
+.overview-card{
+    background:#fff;border:1px solid #e2e8f0;border-radius:18px;
+    padding:18px 18px 16px;min-height:142px;
+    box-shadow:0 5px 18px rgba(15,30,60,.055)
+}
+.overview-card .icon{
+    width:36px;height:36px;border-radius:11px;display:flex;
+    align-items:center;justify-content:center;font-size:18px;font-weight:800;
+    margin-bottom:12px
+}
+.overview-card .label{font-size:.88rem;color:#667085;font-weight:650}
+.overview-card .value{font-size:1.75rem;line-height:1.05;font-weight:850;color:#182235;margin:3px 0 7px}
+.overview-card .desc{font-size:.78rem;color:#7a8495;line-height:1.35}
+.blue .icon{background:#e7f0ff;color:#2359a8}
+.teal .icon{background:#e4f8f5;color:#087f73}
+.amber .icon{background:#fff3d8;color:#a66a00}
+.purple .icon{background:#f0eaff;color:#6f42c1}
+.red .icon{background:#ffe8e7;color:#c23b35}
+.green .icon{background:#e5f7eb;color:#24824a}
+
+.health-card{
+    background:#fff;border:1px solid #e2e8f0;border-radius:18px;
+    padding:17px 19px;box-shadow:0 5px 18px rgba(15,30,60,.045)
+}
+.health-card .big{font-size:1.7rem;font-weight:850;margin-top:4px}
+.health-card .small{font-size:.78rem;color:#737e90}
+.health-title{font-weight:750;color:#253047}
+.health-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+.dot-red{background:#df4b45}.dot-amber{background:#e3a629}.dot-blue{background:#4c78c2}.dot-green{background:#37a56a}
+
+/* Workflow */
+.workflow{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    margin:4px 0 2px
+}
+.workflow-step{
+    background:#fff;border:1px solid #e0e6ef;border-radius:14px;
+    padding:12px 15px;min-width:135px;box-shadow:0 4px 14px rgba(15,30,60,.04)
+}
+.workflow-step .num{
+    display:inline-flex;width:24px;height:24px;border-radius:50%;
+    align-items:center;justify-content:center;background:#e9f0fb;color:#1f4f93;
+    font-size:.76rem;font-weight:800;margin-right:7px
+}
+.workflow-step strong{font-size:.88rem;color:#273249}
+.workflow-arrow{color:#98a2b3;font-weight:800}
+
+/* Existing components */
 .card{background:white;border:1px solid #e4e8ef;border-radius:18px;padding:18px;box-shadow:0 5px 20px rgba(15,30,60,.05)}
 .kpi{font-size:1.75rem;font-weight:800}.muted{color:#697386;font-size:.86rem}
 .chain{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:12px 0}
@@ -25,6 +84,39 @@ st.markdown("""
 .ai{background:#f5f1ff;border:1px solid #ddd2ff;border-radius:16px;padding:18px}
 .good{background:#eefaf2;border:1px solid #ccebd7;border-radius:14px;padding:14px}
 .warn{background:#fff8e8;border:1px solid #f2dfae;border-radius:14px;padding:14px}
+
+/* Make Streamlit tabs look like a real product navigation bar */
+div[data-baseweb="tab-list"]{
+    gap:6px;background:#e9eef6;padding:6px;border-radius:15px;
+    border:1px solid #dde4ee
+}
+button[data-baseweb="tab"]{
+    border-radius:11px !important;padding:10px 15px !important;
+    font-weight:700 !important;color:#5b6577 !important;
+    border:1px solid transparent !important;background:transparent !important
+}
+button[data-baseweb="tab"][aria-selected="true"]{
+    background:#fff !important;color:#173d78 !important;
+    border-color:#d5deeb !important;box-shadow:0 3px 10px rgba(20,45,85,.08)
+}
+button[data-baseweb="tab"]:hover{color:#173d78 !important;background:#f8fafc !important}
+div[data-baseweb="tab-highlight"]{background:#2b63b7 !important;height:3px !important}
+
+/* Sidebar */
+section[data-testid="stSidebar"]{background:#eef3f9}
+section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
+.sidebar-brand{
+    background:linear-gradient(135deg,#0b1f44,#234a91);color:white;
+    border-radius:17px;padding:16px 17px;margin-bottom:16px
+}
+.sidebar-brand .title{font-weight:800;font-size:1.05rem}
+.sidebar-brand .sub{font-size:.76rem;opacity:.78;margin-top:3px}
+.status-pill{
+    border-radius:12px;padding:11px 13px;margin:8px 0;
+    font-weight:700;font-size:.82rem
+}
+.status-ok{background:#dff4e7;color:#1d7041;border:1px solid #bfe5cd}
+.status-warn{background:#fff1d8;color:#8a5a00;border:1px solid #efd59e}
 </style>
 """, unsafe_allow_html=True)
 
@@ -45,12 +137,12 @@ with st.sidebar:
     uploaded=st.file_uploader("Upload warehouse workbook",type=["xlsx"])
     path=uploaded if uploaded is not None else default_path
     st.caption("Snapshot: 05 Sep 2026")
-    model_name = st.secrets.get('OPENAI_MODEL', os.getenv('OPENAI_MODEL', 'gpt-5'))
+    model_name = st.secrets.get('OPENAI_MODEL', os.getenv('OPENAI_MODEL', 'gpt-4.1-mini'))
     if enabled():
         st.success(f"LLM enabled · {model_name}")
     else:
         st.warning("LLM not enabled — deterministic evidence-grounded fallback is active.")
-        st.caption("Add OPENAI_API_KEY in Streamlit Cloud → Settings → Secrets, then reboot the app.")
+        st.caption("Configure VW Group LLMaaS secrets in Streamlit Cloud → Settings → Secrets.")
     st.divider()
     st.caption("Governance")
     st.caption("Human approval required · Simulated actions · Audit retained")
@@ -167,18 +259,188 @@ def build_finding_context(finding, data, dq, anomalies):
         "recommended_action": "Review the exact finding and connected operational records before corrective action.",
     }
 
-# KPI bar
-k=st.columns(6)
-k[0].metric("Materials",len(data["Material_Master"]))
-k[1].metric("Inventory",len(data["Inventory_Stock"]))
-k[2].metric("Deliveries",len(data["Deliveries_Dispatch"]))
-k[3].metric("POs",len(data["Purchase_Replenish"]))
-k[4].metric("Findings",len(dq)+len(anomalies))
-k[5].metric("Correlated cases",len(cases))
+# -------------------------------------------------------------------
+# Executive overview / landing section
+# -------------------------------------------------------------------
+critical_count = 0
+high_count = 0
+if cases is not None and not cases.empty and "severity" in cases.columns:
+    critical_count = int((cases["severity"].astype(str).str.lower() == "critical").sum())
+    high_count = int((cases["severity"].astype(str).str.lower() == "high").sum())
 
-tabs=st.tabs(["Control Tower","Root Cause AI","Trace Graph","Approvals","Copilot","Data Explorer","Audit"])
+pending = sum(
+    1 for _, _case in cases.iterrows()
+    if st.session_state.actions.get(
+        str(_case.get("case_id", "")).strip(), {}
+    ).get("status") == "Pending"
+) if cases is not None and not cases.empty else 0
+
+st.markdown(
+    """
+    <div class="section-title">Operations overview</div>
+    <div class="section-subtitle">
+        A quick health view of the warehouse control tower. Use the tabs below
+        when you want to investigate, explain, trace, approve, or explore records.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+overview_cols = st.columns(6)
+overview_cards = [
+    ("blue", "▦", "Materials", len(data["Material_Master"]), "Master-data records in scope"),
+    ("teal", "◫", "Inventory", len(data["Inventory_Stock"]), "Stock records being monitored"),
+    ("amber", "↗", "Deliveries", len(data["Deliveries_Dispatch"]), "Inbound / outbound delivery records"),
+    ("purple", "▤", "Purchase Orders", len(data["Purchase_Replenish"]), "Replenishment records"),
+    ("red", "!", "Findings", len(dq) + len(anomalies), "Data-quality + process issues"),
+    ("green", "⌁", "RCA Cases", len(cases), "Cross-system cases correlated"),
+]
+for col, (tone, icon, label, value, desc) in zip(overview_cols, overview_cards):
+    with col:
+        st.markdown(
+            f"""
+            <div class="overview-card {tone}">
+                <div class="icon">{icon}</div>
+                <div class="label">{label}</div>
+                <div class="value">{value:,}</div>
+                <div class="desc">{desc}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+health_cols = st.columns(4)
+health_cards = [
+    ("dot-red", "Critical RCA cases", critical_count, "Highest-priority correlated cases"),
+    ("dot-amber", "High RCA cases", high_count, "Cases requiring prompt review"),
+    ("dot-blue", "Pending approval", pending, "Human decisions waiting in the queue"),
+    ("dot-green", "LLM status", "Ready" if enabled() else "Fallback", "AI explanation service"),
+]
+for col, (dot, title, value, desc) in zip(health_cols, health_cards):
+    with col:
+        st.markdown(
+            f"""
+            <div class="health-card">
+                <div class="health-title"><span class="health-dot {dot}"></span>{title}</div>
+                <div class="big">{value}</div>
+                <div class="small">{desc}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+st.markdown("**Control-tower workflow**", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div class="workflow">
+        <div class="workflow-step"><span class="num">1</span><strong>Detect</strong></div>
+        <span class="workflow-arrow">→</span>
+        <div class="workflow-step"><span class="num">2</span><strong>Correlate</strong></div>
+        <span class="workflow-arrow">→</span>
+        <div class="workflow-step"><span class="num">3</span><strong>Explain</strong></div>
+        <span class="workflow-arrow">→</span>
+        <div class="workflow-step"><span class="num">4</span><strong>Assess impact</strong></div>
+        <span class="workflow-arrow">→</span>
+        <div class="workflow-step"><span class="num">5</span><strong>Approve</strong></div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+# Compact navigation context
+st.markdown(
+    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
+    unsafe_allow_html=True,
+)
+
+tabs=st.tabs([
+    "Overview",
+    "Control Tower",
+    "Root Cause AI",
+    "Trace Graph",
+    "Approvals",
+    "Copilot",
+    "Data Explorer",
+    "Audit",
+])
 
 with tabs[0]:
+    st.subheader("Control Tower Overview")
+    st.caption("Start with the health picture, then move into the investigation workflow.")
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(
+            f"""
+            <div class="card">
+                <div style="font-size:.78rem;color:#667085;font-weight:700">01 · FIND</div>
+                <div style="font-size:1.2rem;font-weight:800;margin:5px 0">What needs attention?</div>
+                <div style="color:#697386;font-size:.86rem;line-height:1.45">
+                    Review <b>{len(dq)}</b> data-quality findings and
+                    <b>{len(anomalies)}</b> process/inventory anomalies.
+                </div>
+            </div>
+            """, unsafe_allow_html=True
+        )
+    with c2:
+        st.markdown(
+            f"""
+            <div class="card">
+                <div style="font-size:.78rem;color:#667085;font-weight:700">02 · UNDERSTAND</div>
+                <div style="font-size:1.2rem;font-weight:800;margin:5px 0">Why is it happening?</div>
+                <div style="color:#697386;font-size:.86rem;line-height:1.45">
+                    Trace <b>{len(cases)}</b> cross-system cases across
+                    material, inventory, deliveries, POs and vendors.
+                </div>
+            </div>
+            """, unsafe_allow_html=True
+        )
+    with c3:
+        st.markdown(
+            f"""
+            <div class="card">
+                <div style="font-size:.78rem;color:#667085;font-weight:700">03 · DECIDE</div>
+                <div style="font-size:1.2rem;font-weight:800;margin:5px 0">What should happen next?</div>
+                <div style="color:#697386;font-size:.86rem;line-height:1.45">
+                    <b>{pending}</b> cases are awaiting human approval.
+                    Proposed actions remain simulated until a person approves them.
+                </div>
+            </div>
+            """, unsafe_allow_html=True
+        )
+
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+    st.markdown("### Recommended path")
+    st.markdown(
+        """
+        <div class="workflow">
+            <div class="workflow-step"><span class="num">1</span><strong>Control Tower</strong></div>
+            <span class="workflow-arrow">→</span>
+            <div class="workflow-step"><span class="num">2</span><strong>Root Cause AI</strong></div>
+            <span class="workflow-arrow">→</span>
+            <div class="workflow-step"><span class="num">3</span><strong>Trace Graph</strong></div>
+            <span class="workflow-arrow">→</span>
+            <div class="workflow-step"><span class="num">4</span><strong>Approvals</strong></div>
+            <span class="workflow-arrow">→</span>
+            <div class="workflow-step"><span class="num">5</span><strong>Audit</strong></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+    st.info(
+        "Tip: Use Copilot for natural-language questions such as "
+        "\"Why is this material short?\" or \"Explain DQ-0102\". "
+        "Use Data Explorer when you need to inspect the underlying workbook records."
+    )
+
+with tabs[1]:
     st.subheader("Prioritized operational worklist")
     st.caption("Start here: review Critical/High findings, open Root Cause AI, then approve the proposed fix.")
 
@@ -260,7 +522,7 @@ with tabs[0]:
             "text/csv"
         )
 
-with tabs[1]:
+with tabs[2]:
     st.subheader("AI Root Cause Analysis")
     st.caption("Cross-system evidence → root cause → impact → recommended corrective action")
     if cases.empty:
@@ -296,7 +558,7 @@ with tabs[1]:
 
         st.markdown(f"<div class='good'><b>Proposed action:</b> {case['recommended_action']}</div>",unsafe_allow_html=True)
 
-with tabs[2]:
+with tabs[3]:
     st.subheader("Relationship Trace Graph")
     st.caption("Follow one material across the six operational sheets. Relationships are built from workbook keys.")
     if cases.empty:
@@ -336,7 +598,7 @@ with tabs[2]:
             with st.expander(f"{title} · {len(df)} linked rows"):
                 st.dataframe(df[cols],width="stretch",hide_index=True)
 
-with tabs[3]:
+with tabs[4]:
     st.subheader("Human approval gate")
     st.caption("The Action Agent proposes. A human decides. The app only simulates execution.")
     if cases.empty: st.info("No actions.")
@@ -372,7 +634,7 @@ with tabs[3]:
                 st.rerun()
             st.write(f"**Current status:** {state['status']}")
 
-with tabs[4]:
+with tabs[5]:
     st.subheader("AI Warehouse Copilot")
     st.caption("Ask about any finding, material, delivery, PO, vendor, or workbook-wide issue.")
     q=st.text_input(
@@ -494,13 +756,13 @@ with tabs[4]:
                     with st.spinner("Checking the entire workbook..."):
                         st.markdown(copilot_workbook_answer(q, dq, anomalies, data))
 
-with tabs[5]:
+with tabs[6]:
     st.subheader("Data Explorer")
     visible_sheets=[s for s in data.keys() if s not in {"README","Data_Dictionary"}]
     sheet=st.selectbox("Sheet",visible_sheets)
     st.dataframe(data[sheet],width="stretch",hide_index=True)
 
-with tabs[6]:
+with tabs[7]:
     st.subheader("Audit Trail")
     if st.session_state.audit:
         st.dataframe(pd.DataFrame(st.session_state.audit),width="stretch",hide_index=True)
