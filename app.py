@@ -134,7 +134,7 @@ button[data-baseweb="tab"][aria-selected="true"]{
     border-color:#cbd8ea !important;
     box-shadow:0 3px 10px rgba(20,45,85,.10);
 }
-button[data-baseweb="tab"]:hover{color:#173d78 !important;background:#f8fafc !important}
+button[data-baseweb="tab"]:hover{color:#ffffff !important;background:#f8fafc !important}
 button[data-baseweb="tab"] span{font-size:.95rem}
 button[data-baseweb="tab"] p{display:flex;align-items:center;gap:6px}
 div[data-baseweb="tab-highlight"]{background:#2b63b7 !important;height:3px !important}
@@ -143,10 +143,10 @@ div[data-baseweb="tab-highlight"]{background:#2b63b7 !important;height:3px !impo
     color:#334563 !important;
 }
 [data-testid="stMetricValue"]{
-    color:#102d57 !important;
+    color:#12345b !important;
 }
 h1,h2,h3,h4{
-    color:#102d57 !important;
+    color:#12345b !important;
 }
 
 
@@ -167,6 +167,14 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 }
 .status-ok{background:#dff4e7;color:#1d7041;border:1px solid #bfe5cd}
 .status-warn{background:#fff1d8;color:#8a5a00;border:1px solid #efd59e}
+
+.hero h1, .hero h2, .hero h3, .hero .hero-title{
+    color:#ffffff !important;
+    text-shadow:0 1px 2px rgba(0,0,0,.18) !important;
+}
+.hero p, .hero .hero-subtitle{
+    color:#f3f7ff !important;
+}
 </style>
 """.replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
 
