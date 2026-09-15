@@ -10,7 +10,7 @@ import streamlit as st
 from agents import load_workbook, run_pipeline, SNAPSHOT_DATE
 from llm import generate_root_cause, copilot_answer, copilot_workbook_answer, enabled
 
-st.set_page_config(page_title="IntelliWarehouse AI Control Tower", page_icon="◈", layout="wide")
+st.set_page_config(page_title="IntelliWarehouse AI", page_icon="◈", layout="wide")
 
 # Warehouse background image hosted on Vecteezy.
 # Using the public image URL keeps the repository free of image assets.
@@ -180,7 +180,7 @@ if not BG_IMAGE.exists():
 
 st.markdown("""
 <div class="hero">
-<h1>◈IntelliWarehouse AI Control Tower</h1>
+<h1>◈IntelliWarehouse AI</h1>
 <p>Detect → Correlate → Explain → Impact → Approve</p>
 </div>
 """, unsafe_allow_html=True)
@@ -380,7 +380,7 @@ else:
 st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 st.markdown("""
 <div class="overview-note">
-<b>Next:</b> use <b>Control Tower</b> to review issues, <b>Root Cause AI</b> to understand a case, and <b>Approvals</b> when a decision is required.
+<b>Next:</b> use <b>Operations</b> to review issues, <b>Root Cause AI</b> to understand a case, and <b>Approvals</b> when a decision is required.
 </div>
 """, unsafe_allow_html=True)
 
@@ -392,7 +392,7 @@ st.markdown(
 
 tabs=st.tabs([
     "🏠  Overview",
-    "📊  Control Tower",
+    "📊  Operations",
     "🧠  Root Cause AI",
     "🔗  Trace Graph",
     "✅  Approvals",
@@ -402,7 +402,7 @@ tabs=st.tabs([
 ])
 
 with tabs[0]:
-    st.subheader("Control Tower Overview")
+    st.subheader("Operations Overview")
     st.caption("Start with the health picture, then move into the investigation workflow.")
 
     c1, c2, c3 = st.columns(3)
@@ -451,7 +451,7 @@ with tabs[0]:
     st.markdown(
         """
         <div class="workflow">
-            <div class="workflow-step"><span class="num">1</span><strong>Control Tower</strong></div>
+            <div class="workflow-step"><span class="num">1</span><strong>Operations</strong></div>
             <span class="workflow-arrow">→</span>
             <div class="workflow-step"><span class="num">2</span><strong>Root Cause AI</strong></div>
             <span class="workflow-arrow">→</span>
