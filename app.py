@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 import os, json
+import base64
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -11,31 +12,32 @@ from llm import generate_root_cause, copilot_answer, copilot_workbook_answer, en
 
 st.set_page_config(page_title="IntelliWarehouse AI Control Tower", page_icon="◈", layout="wide")
 
-# Local warehouse image used as a compact visual element inside the app.
+# Load the warehouse image from the same folder as app.py and embed it as base64.
+# This is reliable on Streamlit Cloud; CSS cannot reliably resolve a local
+# relative file such as url("bg.jpeg") from the browser.
+# IMPORTANT: keep bg.jpeg in the same GitHub folder as app.py.
 BG_PATH = Path(__file__).parent / "bg.jpeg"
+bg_data_uri = ""
+if BG_PATH.exists():
+    bg_b64 = base64.b64encode(BG_PATH.read_bytes()).decode("utf-8")
+    bg_data_uri = f"url('data:image/jpeg;base64,{bg_b64}')"
 
-def show_warehouse_image(caption=None):
-    """Render the repository-local warehouse image using Streamlit's image element."""
-    if BG_PATH.exists():
-        st.image(
-            str(BG_PATH),
-            caption=caption,
-            use_container_width=True,
-        )
+bg_layer = (
+    f"linear-gradient(rgba(238,244,250,.76),rgba(238,244,250,.76)), {bg_data_uri}"
+    if bg_data_uri else
+    "linear-gradient(#f4f7fb,#f4f7fb)"
+)
 
-
-st.markdown("""
+st.markdown(f"""
 <style>
-/* Warehouse image background - expects bg.jpeg beside app.py */
-.stApp{
-    background:
-        linear-gradient(rgba(244,247,251,.88),rgba(244,247,251,.88)),
-        url("bg.jpeg");
+/* Warehouse image background */
+.stApp{{
+    background: {bg_layer};
     background-size:cover;
     background-position:center center;
     background-attachment:fixed;
     background-repeat:no-repeat;
-}
+}}
 .block-container{max-width:1500px;padding-top:1.1rem;padding-bottom:3rem}
 
 /* Keep the background visible without reducing readability */
@@ -124,12 +126,42 @@ div[data-baseweb="tab-list"]{
     border:1px solid #dde4ee
 }
 button[data-baseweb="tab"]{
-    border-radius:11px !important;padding:10px 15px !important;
-    font-weight:700 !important;color:#5b6577 !important;
-    border:1px solid transparent !important;background:transparent !important
+    border-radius:11px !important;padding:9px 13px !important;
+    font-weight:700 !important;color:#4f5b70 !important;
+    border:1px solid transparent !important;background:transparent !important;
+    display:flex !important;align-items:center !important;gap:7px !important;
+}
+button[data-baseweb="tab"]::before{
+    content:"";display:inline-block;width:21px;height:21px;flex:0 0 21px;
+    background-repeat:no-repeat;background-position:center;background-size:19px 19px;
+    opacity:.86;
+}
+button[data-baseweb="tab"]:nth-child(1)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23235aa6' stroke-width='2'%3E%3Cpath d='M3 11.5 12 4l9 7.5'/%3E%3Cpath d='M5 10v10h14V10M9 20v-6h6v6'/%3E%3C/svg%3E");
+}
+button[data-baseweb="tab"]:nth-child(2)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23235aa6' stroke-width='2'%3E%3Cpath d='M4 19V5h16v14z'/%3E%3Cpath d='M7 15h2v2H7zm4-5h2v7h-2zm4-3h2v10h-2z'/%3E%3C/svg%3E");
+}
+button[data-baseweb="tab"]:nth-child(3)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236f42c1' stroke-width='2'%3E%3Cpath d='M9 4a3 3 0 0 1 6 0v2a4 4 0 0 1 0 8v2a3 3 0 0 1-6 0v-2a4 4 0 0 1 0-8z'/%3E%3Cpath d='M6 9h3m6 0h3M6 15h3m6 0h3'/%3E%3C/svg%3E");
+}
+button[data-baseweb="tab"]:nth-child(4)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b72c9' stroke-width='2'%3E%3Ccircle cx='5' cy='12' r='2'/%3E%3Ccircle cx='19' cy='6' r='2'/%3E%3Ccircle cx='19' cy='18' r='2'/%3E%3Cpath d='m7 11 10-4M7 13l10 4'/%3E%3C/svg%3E");
+}
+button[data-baseweb="tab"]:nth-child(5)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f8b5b' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='4'/%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+button[data-baseweb="tab"]:nth-child(6)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b72c9' stroke-width='2'%3E%3Cpath d='M6 8h12a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H9l-4 3v-6a3 3 0 0 1-2-3v-1a3 3 0 0 1 3-3z'/%3E%3Ccircle cx='8' cy='13' r='1' fill='%230b72c9'/%3E%3Ccircle cx='12' cy='13' r='1' fill='%230b72c9'/%3E%3Ccircle cx='16' cy='13' r='1' fill='%230b72c9'/%3E%3C/svg%3E");
+}
+button[data-baseweb="tab"]:nth-child(7)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b63a3' stroke-width='2'%3E%3Cellipse cx='12' cy='5' rx='8' ry='3'/%3E%3Cpath d='M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7'/%3E%3C/svg%3E");
+}
+button[data-baseweb="tab"]:nth-child(8)::before{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6577' stroke-width='2'%3E%3Cpath d='M7 3h8l4 4v14H7z'/%3E%3Cpath d='M15 3v5h4M10 13h6M10 17h6'/%3E%3C/svg%3E");
 }
 button[data-baseweb="tab"][aria-selected="true"]{
-    background:#fff !important;color:#173d78 !important;
+    background:rgba(255,255,255,.96) !important;color:#173d78 !important;
     border-color:#d5deeb !important;box-shadow:0 3px 10px rgba(20,45,85,.08)
 }
 button[data-baseweb="tab"]:hover{color:#173d78 !important;background:#f8fafc !important}
@@ -391,27 +423,6 @@ tabs=st.tabs([
 with tabs[0]:
     st.subheader("Control Tower Overview")
     st.caption("Start with the health picture, then move into the investigation workflow.")
-
-    # Small visual anchor — the warehouse image is shown with Streamlit itself,
-    # while the dashboard data remains the primary focus.
-    img_col, context_col = st.columns([1.15, 1.85])
-    with img_col:
-        show_warehouse_image("Warehouse operations")
-    with context_col:
-        st.markdown(
-            f"""
-            <div class="card" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
-                <div style="font-size:.78rem;color:#667085;font-weight:700;letter-spacing:.04em">WAREHOUSE CONTEXT</div>
-                <div style="font-size:1.35rem;font-weight:800;margin:6px 0 8px">Operations at a glance</div>
-                <div style="color:#697386;font-size:.9rem;line-height:1.55">
-                    The control tower connects physical warehouse activity with inventory,
-                    deliveries, replenishment, supplier and data-quality signals.
-                    <b>{len(cases)}</b> correlated cases are currently in scope.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
     c1, c2, c3 = st.columns(3)
     with c1:
