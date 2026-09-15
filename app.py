@@ -10,7 +10,7 @@ import streamlit as st
 from agents import load_workbook, run_pipeline, SNAPSHOT_DATE
 from llm import generate_root_cause, copilot_answer, copilot_workbook_answer, enabled
 
-st.set_page_config(page_title="IntelliWarehouse AI", page_icon="◈", layout="wide")
+st.set_page_config(page_title="IntelliWarehouse AI Control Tower", page_icon="◈", layout="wide")
 
 # Warehouse background image hosted on Vecteezy.
 # Using the public image URL keeps the repository free of image assets.
@@ -40,18 +40,18 @@ st.markdown("""
 /* Hero */
 .hero{
     background:linear-gradient(135deg,#081b3a 0%,#12366d 52%,#2459a8 100%);
-    color:white;border-radius:24px;padding:28px 34px 24px;margin-bottom:12px;
+    color:white;border-radius:24px;padding:30px 34px;margin-bottom:18px;
     box-shadow:0 12px 30px rgba(8,27,58,.16)
 }
-.hero h1{font-size:2.15rem;margin:0;font-weight:800;letter-spacing:-.02em}
-.hero p{opacity:.90;margin:.45rem 0 0;font-size:.98rem;font-weight:550}
+.hero h1{font-size:2.35rem;margin:0;font-weight:800;letter-spacing:-.02em}
+.hero p{opacity:.82;margin:.45rem 0 0;font-size:1.02rem}
 
 /* Overview */
 .section-title{font-size:1.45rem;font-weight:800;color:#172033;margin:4px 0 2px}
 .section-subtitle{color:#697386;margin-bottom:16px}
 .overview-card{
-    background:rgba(255,255,255,.96);border:1px solid #dce5ef;border-radius:16px;
-    padding:16px 17px 15px;min-height:136px;
+    background:#fff;border:1px solid #e2e8f0;border-radius:18px;
+    padding:18px 18px 16px;min-height:142px;
     box-shadow:0 5px 18px rgba(15,30,60,.055)
 }
 .overview-card .icon{
@@ -113,103 +113,40 @@ st.markdown("""
 .good{background:#eefaf2;border:1px solid #ccebd7;border-radius:14px;padding:14px}
 .warn{background:#fff8e8;border:1px solid #f2dfae;border-radius:14px;padding:14px}
 
-/* HCI navigation: visibility, recognition, consistency, feedback */
+/* Make Streamlit tabs look like a real product navigation bar */
 div[data-baseweb="tab-list"]{
-    display:flex !important;
-    gap:6px !important;
-    padding:6px !important;
-    margin:4px 0 18px !important;
-    background:rgba(246,249,253,.94) !important;
-    border:1px solid #d5dfeb !important;
-    border-radius:14px !important;
-    box-shadow:0 3px 12px rgba(24,55,91,.08) !important;
-    overflow-x:auto !important;
+    gap:6px;background:#e9eef6;padding:6px;border-radius:15px;
+    border:1px solid #dde4ee
 }
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
-    position:relative !important;
-    flex:1 0 auto !important;
-    min-width:118px !important;
-    min-height:46px !important;
-    height:46px !important;
-    padding:6px 13px 6px 38px !important;
-    margin:0 !important;
-    border:1px solid transparent !important;
-    border-radius:10px !important;
-    background:transparent !important;
-    color:#334a67 !important;
-    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
-    font-size:14px !important;
+button[data-baseweb="tab"]{
+    border-radius:11px !important;
+    padding:9px 13px !important;
     font-weight:700 !important;
-    line-height:1.15 !important;
+    font-size:.94rem !important;
+    color:#243b63 !important;
+    border:1px solid transparent !important;
+    background:rgba(255,255,255,.28) !important;
     white-space:nowrap !important;
-    box-shadow:none !important;
-    transition:background .15s ease,box-shadow .15s ease,transform .15s ease !important;
 }
-div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
-div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
-    color:inherit !important;
-    font-size:14px !important;
-    font-weight:inherit !important;
-    margin:0 !important;
+button[data-baseweb="tab"][aria-selected="true"]{
+    background:rgba(255,255,255,.97) !important;
+    color:#0b4fa3 !important;
+    border-color:#cbd8ea !important;
+    box-shadow:0 3px 10px rgba(20,45,85,.10);
 }
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
-    position:absolute !important;
-    left:12px !important;
-    top:50% !important;
-    transform:translateY(-50%) !important;
-    font-size:18px !important;
-    line-height:1 !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2)::before{content:"📊";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3)::before{content:"🧠";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4)::before{content:"🔗";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{content:"✅";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
-/* Color cue per function */
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4){border-top:3px solid #0b82c9 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5){border-top:3px solid #18a66b !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:3px solid #d58a16 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
-    background:#ffffff !important;
-    color:#123b72 !important;
-    border-left-color:#c8d6e6 !important;
-    border-right-color:#c8d6e6 !important;
-    border-bottom-color:#c8d6e6 !important;
-    box-shadow:0 3px 9px rgba(20,55,95,.10) !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
-    background:#ffffff !important;
-    color:#0b4f96 !important;
-    border-left-color:#b7c9dd !important;
-    border-right-color:#b7c9dd !important;
-    border-bottom-color:#b7c9dd !important;
-    box-shadow:0 4px 12px rgba(20,55,95,.13) !important;
-    transform:translateY(-1px) !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
-div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
-    color:#0b4f96 !important;
-    font-weight:850 !important;
-}
-div[data-baseweb="tab-highlight"]{display:none !important;}
-
+button[data-baseweb="tab"]:hover{color:#173d78 !important;background:#f8fafc !important}
+button[data-baseweb="tab"] span{font-size:.95rem}
+button[data-baseweb="tab"] p{display:flex;align-items:center;gap:6px}
+div[data-baseweb="tab-highlight"]{background:#2b63b7 !important;height:3px !important}
 /* Readability on warehouse background */
 .stMarkdown, .stCaption, label, [data-testid="stMetricLabel"]{
     color:#334563 !important;
 }
 [data-testid="stMetricValue"]{
-    color:#12345b !important;
+    color:#102d57 !important;
 }
 h1,h2,h3,h4{
-    color:#12345b !important;
+    color:#102d57 !important;
 }
 
 
@@ -230,55 +167,8 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 }
 .status-ok{background:#dff4e7;color:#1d7041;border:1px solid #bfe5cd}
 .status-warn{background:#fff1d8;color:#8a5a00;border:1px solid #efd59e}
-
-.hero h1, .hero h2, .hero h3, .hero .hero-title{
-    color:#ffffff !important;
-    text-shadow:0 1px 2px rgba(0,0,0,.18) !important;
-}
-.hero p, .hero .hero-subtitle{
-    color:#f3f7ff !important;
-}
 </style>
 """.replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-@media (max-width: 1100px){
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
-        font-size:13px !important;
-        padding-left:34px !important;
-        padding-right:9px !important;
-    }
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
-        font-size:13px !important;
-    }
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
-        left:10px !important;
-        font-size:17px !important;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-st.markdown("""
-<style>
-div[data-baseweb="tab-list"]{
-    gap:4px !important;
-    align-items:center !important;
-    padding:5px 3px !important;
-}
-@media (max-width: 1100px){
-    button[data-baseweb="tab"]{
-        font-size:13px !important;
-        padding:6px 9px !important;
-        margin:0 1px !important;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
 
 if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
@@ -290,28 +180,10 @@ if not BG_IMAGE.exists():
 
 st.markdown("""
 <div class="hero">
-<h1>◈IntelliWarehouse AI</h1>
+<h1>◈IntelliWarehouse AI Control Tower</h1>
 <p>Detect → Correlate → Explain → Impact → Approve</p>
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown("<div class='muted'>Workspace navigation</div>", unsafe_allow_html=True)
-# Compact navigation context
-st.markdown(
-    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
-    unsafe_allow_html=True,
-)
-
-tabs=st.tabs([
-    "Overview",
-    "Operations",
-    "Root Cause AI",
-    "Trace Graph",
-    "Approvals",
-    "Copilot",
-    "Data Explorer",
-    "Audit",
-])
 
 with st.sidebar:
     st.header("Control Center")
@@ -461,7 +333,8 @@ st.markdown(
     """
     <div class="section-title">Operations overview</div>
     <div class="section-subtitle">
-        A quick health view of warehouse operations. Use the navigation to investigate, explain, trace, approve, or explore records.
+        A quick health view of the warehouse control tower. Use the tabs below
+        when you want to investigate, explain, trace, approve, or explore records.
     </div>
     """,
     unsafe_allow_html=True,
@@ -507,15 +380,29 @@ else:
 st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 st.markdown("""
 <div class="overview-note">
-<b>Next:</b> use <b>Operations</b> to review issues, <b>Root Cause AI</b> to understand a case, and <b>Approvals</b> when a decision is required.
+<b>Next:</b> use <b>Control Tower</b> to review issues, <b>Root Cause AI</b> to understand a case, and <b>Approvals</b> when a decision is required.
 </div>
 """, unsafe_allow_html=True)
 
-# Navigation is rendered directly below the hero for immediate visibility.
+# Compact navigation context
+st.markdown(
+    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
+    unsafe_allow_html=True,
+)
 
+tabs=st.tabs([
+    "🏠  Overview",
+    "📊  Control Tower",
+    "🧠  Root Cause AI",
+    "🔗  Trace Graph",
+    "✅  Approvals",
+    "💬  Copilot",
+    "🗄️  Data Explorer",
+    "🧾  Audit",
+])
 
 with tabs[0]:
-    st.subheader("Operations Overview")
+    st.subheader("Control Tower Overview")
     st.caption("Start with the health picture, then move into the investigation workflow.")
 
     c1, c2, c3 = st.columns(3)
@@ -564,7 +451,7 @@ with tabs[0]:
     st.markdown(
         """
         <div class="workflow">
-            <div class="workflow-step"><span class="num">1</span><strong>Operations</strong></div>
+            <div class="workflow-step"><span class="num">1</span><strong>Control Tower</strong></div>
             <span class="workflow-arrow">→</span>
             <div class="workflow-step"><span class="num">2</span><strong>Root Cause AI</strong></div>
             <span class="workflow-arrow">→</span>
