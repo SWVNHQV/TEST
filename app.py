@@ -118,61 +118,84 @@ div[data-baseweb="tab-list"]{
     gap:6px;background:#e9eef6;padding:6px;border-radius:15px;
     border:1px solid #dde4ee
 }
-/* Color-coded application tabs */
-button[data-baseweb="tab"]{
-    min-height:46px !important;
-    height:46px !important;
-    padding:7px 13px !important;
-    margin:0 3px !important;
-    border-radius:12px !important;
+/* Strong, visible, color-coded tab navigation */
+div[data-baseweb="tab-list"]{
+    display:flex !important;
+    gap:7px !important;
+    padding:7px !important;
+    background:rgba(226,235,247,.92) !important;
+    border:1px solid #c8d6e8 !important;
+    border-radius:15px !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
+    position:relative !important;
+    min-height:48px !important;
+    height:48px !important;
+    padding:7px 14px 7px 40px !important;
+    margin:0 !important;
+    border-radius:11px !important;
+    border:1px solid #d0dbea !important;
+    background:rgba(255,255,255,.96) !important;
+    color:#1e3a5f !important;
     font-size:15px !important;
-    font-weight:650 !important;
-    letter-spacing:.05px !important;
-    color:#29415f !important;
-    background:rgba(255,255,255,.78) !important;
-    border:1px solid #d5dfec !important;
-    box-shadow:0 2px 7px rgba(23,55,91,.06) !important;
+    font-weight:750 !important;
+    line-height:1.1 !important;
     white-space:nowrap !important;
-    transition:all .18s ease !important;
+    box-shadow:0 2px 7px rgba(22,52,88,.08) !important;
 }
-button[data-baseweb="tab"]:nth-child(1){
-    border-top:3px solid #2878d0 !important;
+div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
+div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
+    color:#1e3a5f !important;
+    font-size:15px !important;
+    font-weight:750 !important;
+    margin:0 !important;
 }
-button[data-baseweb="tab"]:nth-child(2){
-    border-top:3px solid #159a72 !important;
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
+    position:absolute !important;
+    left:13px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    font-size:20px !important;
+    line-height:1 !important;
+    font-weight:400 !important;
 }
-button[data-baseweb="tab"]:nth-child(3){
-    border-top:3px solid #7b4bc4 !important;
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2)::before{content:"📊";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3)::before{content:"🧠";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4)::before{content:"🔗";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{content:"✅";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
+
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4){border-top:3px solid #0b82c9 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5){border-top:3px solid #18a66b !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:3px solid #d58a16 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
+
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
+    background:#ffffff !important;
+    color:#0b4f96 !important;
+    border-color:#9fb7d2 !important;
+    box-shadow:0 5px 15px rgba(17,54,94,.16) !important;
+    transform:translateY(-1px) !important;
 }
-button[data-baseweb="tab"]:nth-child(4){
-    border-top:3px solid #0b82c9 !important;
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
+    color:#0b4f96 !important;
+    font-weight:850 !important;
 }
-button[data-baseweb="tab"]:nth-child(5){
-    border-top:3px solid #18a66b !important;
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
+    background:#ffffff !important;
+    color:#0b4f96 !important;
+    border-color:#91acd0 !important;
+    box-shadow:0 4px 12px rgba(17,54,94,.13) !important;
 }
-button[data-baseweb="tab"]:nth-child(6){
-    border-top:3px solid #d58a16 !important;
-}
-button[data-baseweb="tab"]:nth-child(7){
-    border-top:3px solid #3d65a6 !important;
-}
-button[data-baseweb="tab"]:nth-child(8){
-    border-top:3px solid #64748b !important;
-}
-button[data-baseweb="tab"][aria-selected="true"]{
-    color:#123b72 !important;
-    background:rgba(255,255,255,.98) !important;
-    border-color:#b9cbe0 !important;
-    box-shadow:0 5px 14px rgba(20,55,95,.13) !important;
-    font-weight:800 !important;
-    transform:translateY(-1px);
-}
-button[data-baseweb="tab"]:hover{
-    color:#123b72 !important;
-    background:rgba(255,255,255,.94) !important;
-    border-color:#a9bfd9 !important;
-    box-shadow:0 4px 12px rgba(20,55,95,.11) !important;
-}
+
 button[data-baseweb="tab"]:hover{color:#ffffff !important;background:#f8fafc !important}
 button[data-baseweb="tab"] span{font-size:.95rem}
 button[data-baseweb="tab"] p{display:flex;align-items:center;gap:6px}
@@ -216,6 +239,33 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 }
 </style>
 """.replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
+st.markdown("""
+<style>
+@media (max-width: 1100px){
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
+        font-size:13px !important;
+        padding-left:34px !important;
+        padding-right:9px !important;
+    }
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
+        font-size:13px !important;
+    }
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
+        left:10px !important;
+        font-size:17px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
+st.markdown("""
+
+""", unsafe_allow_html=True)
+
 
 if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
@@ -438,14 +488,14 @@ st.markdown(
 )
 
 tabs=st.tabs([
-    "🏠  Overview",
-    "📊  Operations",
-    "🧠  Root Cause AI",
-    "🔗  Trace Graph",
-    "✅  Approvals",
-    "💬  Copilot",
-    "🗄️  Data Explorer",
-    "🧾  Audit",
+    "Overview",
+    "Operations",
+    "Root Cause AI",
+    "Trace Graph",
+    "Approvals",
+    "Copilot",
+    "Data Explorer",
+    "Audit",
 ])
 
 with tabs[0]:
@@ -864,17 +914,3 @@ with tabs[7]:
         st.dataframe(pd.DataFrame(st.session_state.audit),width="stretch",hide_index=True)
     else:
         st.info("No human decisions recorded in this session.")
-<style>
-div[data-baseweb="tab-list"]{
-    gap:4px !important;
-    align-items:center !important;
-    padding:5px 3px !important;
-}
-@media (max-width: 1100px){
-    button[data-baseweb="tab"]{
-        font-size:13px !important;
-        padding:6px 9px !important;
-        margin:0 1px !important;
-    }
-}
-</style>
