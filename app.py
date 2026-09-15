@@ -28,11 +28,11 @@ bg_layer = (
     "linear-gradient(#f4f7fb,#f4f7fb)"
 )
 
-st.markdown(f"""
+st.markdown("""
 <style>
 /* Warehouse image background */
 .stApp{{
-    background: {bg_layer};
+    background: __BG_LAYER__;
     background-size:cover;
     background-position:center center;
     background-attachment:fixed;
@@ -187,7 +187,7 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 .status-ok{background:#dff4e7;color:#1d7041;border:1px solid #bfe5cd}
 .status-warn{background:#fff1d8;color:#8a5a00;border:1px solid #efd59e}
 </style>
-""", unsafe_allow_html=True)
+""".replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
 
 if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
