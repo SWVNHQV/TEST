@@ -5,6 +5,7 @@ import json
 import re
 from pathlib import Path
 import streamlit as st
+import httpx
 
 
 def _secret(name: str, default=None):
@@ -39,13 +40,102 @@ Rules:
 """
 
 
-def enabled():
-    return bool(_secret("OPENAI_API_KEY"))
+def get_token() -> str:
+    """Get a VW Group IDP access token using client credentials."""
+    client_id = _secret("VW_IDP_CLIENT_ID")
+    client_secret = _secret("VW_IDP_CLIENT_SECRET")
+
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "Missing VW_IDP_CLIENT_ID or VW_IDP_CLIENT_SECRET. "
+            "Configure them in Streamlit Secrets or environment variables."
+        )
+
+    url = (
+        "https://idp.cloud.vwgroup.com/"
+        "auth/realms/kums-mfa/"
+        "protocol/openid-connect/token"
+    )
+
+    response = httpx.post(
+        url,
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "client_credentials",
+        },
+        timeout=30.0,
+    )
+    response.raise_for_status()
+
+    token_data = response.json()
+    access_token = token_data.get("access_token")
+
+    if not access_token:
+        raise RuntimeError("VW IDP did not return an access_token.")
+
+    return access_token
+
+
+def enabled() -> bool:
+    """Return True when all VW LLMaaS credentials are configured."""
+    return bool(
+        _secret("VW_IDP_CLIENT_ID")
+        and _secret("VW_IDP_CLIENT_SECRET")
+        and _secret("LLM_API_CLIENT_ID")
+    )
 
 
 def _client():
+    """Create the OpenAI-compatible VW Group LLMaaS client."""
     from openai import OpenAI
-    return OpenAI(api_key=_secret("OPENAI_API_KEY"))
+
+    token = get_token()
+    llm_api_client_id = _secret("LLM_API_CLIENT_ID")
+    base_url = _secret(
+        "LLM_API_BASE_URL",
+        "https://llmapi.ai.vwgroup.com",
+    )
+
+    headers = {
+        "X-LLM-API-CLIENT-ID": f"Bearer {llm_api_client_id}"
+    }
+
+    return OpenAI(
+        api_key=token,
+        base_url=base_url,
+        default_headers=headers,
+    )
+
+
+def _llm_complete(
+    prompt: str,
+    system_prompt: str = SYSTEM_PROMPT,
+    model: str | None = None,
+) -> str:
+    """Send a request to VW Group LLMaaS using Chat Completions."""
+    if not enabled():
+        raise RuntimeError("VW LLMaaS credentials are not configured.")
+
+    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+    client = _client()
+
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        stream=False,
+    )
+
+    answer = completion.choices[0].message.content
+
+    if not answer:
+        raise RuntimeError("VW LLMaaS returned an empty response.")
+
+    return answer.strip()
 
 
 def generate_root_cause(case: dict, model: str | None = None) -> str:
@@ -53,8 +143,6 @@ def generate_root_cause(case: dict, model: str | None = None) -> str:
         return fallback_root_cause(case)
 
     model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
-    client = _client()
-
     prompt = f"""
 Analyze this correlated warehouse case as a senior warehouse root-cause analyst.
 
@@ -84,13 +172,7 @@ Write exactly these sections:
 In Evidence Chain, explicitly name the source sheet and the exact record/field values supporting each important conclusion.
 """
 
-    response = client.responses.create(
-        model=model,
-        instructions=SYSTEM_PROMPT,
-        input=prompt
-    )
-
-    return response.output_text.strip()
+    return _llm_complete(prompt=prompt, system_prompt=SYSTEM_PROMPT, model=model)
 
 
 def _load_copilot_workbook():
@@ -152,7 +234,6 @@ def copilot_answer(question: str, case: dict | None = None, model: str | None = 
         return fallback_copilot(question, case)
 
     model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
-    client = _client()
 
     workbook_records = {
         sheet: df.to_dict("records")
@@ -220,12 +301,11 @@ ALL Inventory_Stock rows using Batch Expiry relative to the 2026-09-05 snapshot.
 Do not answer from a selected material such as MAT-100056.
 """
 
-    response = client.responses.create(
+    return _llm_complete(
+        prompt=prompt,
+        system_prompt=SYSTEM_PROMPT,
         model=model,
-        instructions=SYSTEM_PROMPT,
-        input=prompt,
     )
-    return response.output_text.strip()
 
 
 # -------------------------------------------------------------------
@@ -612,7 +692,6 @@ def copilot_workbook_answer(question: str, dq, anomalies, data, model: str | Non
             return "\n".join(lines)
 
         model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
-        client = _client()
 
         prompt = f"""
 Operator question:
@@ -643,12 +722,11 @@ Give a practical review/remediation proposal. Do not claim execution.
 Do not invent any information.
 """
 
-        response = client.responses.create(
+        return _llm_complete(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
             model=model,
-            instructions=SYSTEM_PROMPT,
-            input=prompt
         )
-        return response.output_text.strip()
 
     # ---------------------------------------------------------------
     # 2. Field-level question: "Base UoM", "base uom", "BASE UOM"
@@ -689,7 +767,6 @@ Do not invent any information.
             return "\n".join(lines)
 
         model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
-        client = _client()
 
         prompt = f"""
 Operator question:
@@ -716,12 +793,11 @@ Keep exact issue IDs, records and actual values.
 Do not invent missing records.
 """
 
-        response = client.responses.create(
+        return _llm_complete(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
             model=model,
-            instructions=SYSTEM_PROMPT,
-            input=prompt
         )
-        return response.output_text.strip()
 
     # ---------------------------------------------------------------
     # 3. Material/entity investigation
@@ -797,7 +873,6 @@ Do not invent missing records.
             return "\n".join(lines)
 
         model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
-        client = _client()
 
         prompt = f"""
 Operator question:
@@ -817,12 +892,11 @@ Use exact values and IDs.
 Do not invent information.
 """
 
-        response = client.responses.create(
+        return _llm_complete(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
             model=model,
-            instructions=SYSTEM_PROMPT,
-            input=prompt
         )
-        return response.output_text.strip()
 
     # ---------------------------------------------------------------
     # 4. Broad workbook question
@@ -984,8 +1058,6 @@ Do not invent information.
         )
 
     model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
-    client = _client()
-
     prompt = f"""
 Operator question:
 {q}
@@ -1015,13 +1087,7 @@ Rules:
 - Keep the answer concise but useful, with a small table/list when that makes the answer clearer.
 """
 
-    response = client.responses.create(
-        model=model,
-        instructions=SYSTEM_PROMPT,
-        input=prompt
-    )
-
-    return response.output_text.strip()
+    return _llm_complete(prompt=prompt, system_prompt=SYSTEM_PROMPT, model=model)
 
 
 # -------------------------------------------------------------------
