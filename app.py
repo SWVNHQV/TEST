@@ -40,18 +40,18 @@ st.markdown("""
 /* Hero */
 .hero{
     background:linear-gradient(135deg,#081b3a 0%,#12366d 52%,#2459a8 100%);
-    color:white;border-radius:24px;padding:30px 34px;margin-bottom:18px;
+    color:white;border-radius:24px;padding:28px 34px 24px;margin-bottom:12px;
     box-shadow:0 12px 30px rgba(8,27,58,.16)
 }
-.hero h1{font-size:2.35rem;margin:0;font-weight:800;letter-spacing:-.02em}
-.hero p{opacity:.82;margin:.45rem 0 0;font-size:1.02rem}
+.hero h1{font-size:2.15rem;margin:0;font-weight:800;letter-spacing:-.02em}
+.hero p{opacity:.90;margin:.45rem 0 0;font-size:.98rem;font-weight:550}
 
 /* Overview */
 .section-title{font-size:1.45rem;font-weight:800;color:#172033;margin:4px 0 2px}
 .section-subtitle{color:#697386;margin-bottom:16px}
 .overview-card{
-    background:#fff;border:1px solid #e2e8f0;border-radius:18px;
-    padding:18px 18px 16px;min-height:142px;
+    background:rgba(255,255,255,.96);border:1px solid #dce5ef;border-radius:16px;
+    padding:16px 17px 15px;min-height:136px;
     box-shadow:0 5px 18px rgba(15,30,60,.055)
 }
 .overview-card .icon{
@@ -113,51 +113,52 @@ st.markdown("""
 .good{background:#eefaf2;border:1px solid #ccebd7;border-radius:14px;padding:14px}
 .warn{background:#fff8e8;border:1px solid #f2dfae;border-radius:14px;padding:14px}
 
-/* Make Streamlit tabs look like a real product navigation bar */
-div[data-baseweb="tab-list"]{
-    gap:6px;background:#e9eef6;padding:6px;border-radius:15px;
-    border:1px solid #dde4ee
-}
-/* Strong, visible, color-coded tab navigation */
+/* HCI navigation: visibility, recognition, consistency, feedback */
 div[data-baseweb="tab-list"]{
     display:flex !important;
-    gap:7px !important;
-    padding:7px !important;
-    background:rgba(226,235,247,.92) !important;
-    border:1px solid #c8d6e8 !important;
-    border-radius:15px !important;
+    gap:6px !important;
+    padding:6px !important;
+    margin:4px 0 18px !important;
+    background:rgba(246,249,253,.94) !important;
+    border:1px solid #d5dfeb !important;
+    border-radius:14px !important;
+    box-shadow:0 3px 12px rgba(24,55,91,.08) !important;
+    overflow-x:auto !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
     position:relative !important;
-    min-height:48px !important;
-    height:48px !important;
-    padding:7px 14px 7px 40px !important;
+    flex:1 0 auto !important;
+    min-width:118px !important;
+    min-height:46px !important;
+    height:46px !important;
+    padding:6px 13px 6px 38px !important;
     margin:0 !important;
-    border-radius:11px !important;
-    border:1px solid #d0dbea !important;
-    background:rgba(255,255,255,.96) !important;
-    color:#1e3a5f !important;
-    font-size:15px !important;
-    font-weight:750 !important;
-    line-height:1.1 !important;
+    border:1px solid transparent !important;
+    border-radius:10px !important;
+    background:transparent !important;
+    color:#334a67 !important;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    font-size:14px !important;
+    font-weight:700 !important;
+    line-height:1.15 !important;
     white-space:nowrap !important;
-    box-shadow:0 2px 7px rgba(22,52,88,.08) !important;
+    box-shadow:none !important;
+    transition:background .15s ease,box-shadow .15s ease,transform .15s ease !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
 div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
-    color:#1e3a5f !important;
-    font-size:15px !important;
-    font-weight:750 !important;
+    color:inherit !important;
+    font-size:14px !important;
+    font-weight:inherit !important;
     margin:0 !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
     position:absolute !important;
-    left:13px !important;
+    left:12px !important;
     top:50% !important;
     transform:translateY(-50%) !important;
-    font-size:20px !important;
+    font-size:18px !important;
     line-height:1 !important;
-    font-weight:400 !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2)::before{content:"📊";}
@@ -167,7 +168,7 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{con
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
-
+/* Color cue per function */
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
@@ -176,12 +177,21 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5){border-top:
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:3px solid #d58a16 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
-
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
+    background:#ffffff !important;
+    color:#123b72 !important;
+    border-left-color:#c8d6e6 !important;
+    border-right-color:#c8d6e6 !important;
+    border-bottom-color:#c8d6e6 !important;
+    box-shadow:0 3px 9px rgba(20,55,95,.10) !important;
+}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
     background:#ffffff !important;
     color:#0b4f96 !important;
-    border-color:#9fb7d2 !important;
-    box-shadow:0 5px 15px rgba(17,54,94,.16) !important;
+    border-left-color:#b7c9dd !important;
+    border-right-color:#b7c9dd !important;
+    border-bottom-color:#b7c9dd !important;
+    box-shadow:0 4px 12px rgba(20,55,95,.13) !important;
     transform:translateY(-1px) !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
@@ -189,17 +199,8 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
     color:#0b4f96 !important;
     font-weight:850 !important;
 }
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
-    background:#ffffff !important;
-    color:#0b4f96 !important;
-    border-color:#91acd0 !important;
-    box-shadow:0 4px 12px rgba(17,54,94,.13) !important;
-}
+div[data-baseweb="tab-highlight"]{display:none !important;}
 
-button[data-baseweb="tab"]:hover{color:#ffffff !important;background:#f8fafc !important}
-button[data-baseweb="tab"] span{font-size:.95rem}
-button[data-baseweb="tab"] p{display:flex;align-items:center;gap:6px}
-div[data-baseweb="tab-highlight"]{background:#2b63b7 !important;height:3px !important}
 /* Readability on warehouse background */
 .stMarkdown, .stCaption, label, [data-testid="stMetricLabel"]{
     color:#334563 !important;
@@ -239,6 +240,7 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 }
 </style>
 """.replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
+
 st.markdown("""
 <style>
 @media (max-width: 1100px){
@@ -260,10 +262,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-
-
 st.markdown("""
-
+<style>
+div[data-baseweb="tab-list"]{
+    gap:4px !important;
+    align-items:center !important;
+    padding:5px 3px !important;
+}
+@media (max-width: 1100px){
+    button[data-baseweb="tab"]{
+        font-size:13px !important;
+        padding:6px 9px !important;
+        margin:0 1px !important;
+    }
+}
+</style>
 """, unsafe_allow_html=True)
 
 
@@ -281,6 +294,24 @@ st.markdown("""
 <p>Detect → Correlate → Explain → Impact → Approve</p>
 </div>
 """, unsafe_allow_html=True)
+
+st.markdown("<div class='muted'>Workspace navigation</div>", unsafe_allow_html=True)
+# Compact navigation context
+st.markdown(
+    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
+    unsafe_allow_html=True,
+)
+
+tabs=st.tabs([
+    "Overview",
+    "Operations",
+    "Root Cause AI",
+    "Trace Graph",
+    "Approvals",
+    "Copilot",
+    "Data Explorer",
+    "Audit",
+])
 
 with st.sidebar:
     st.header("Control Center")
@@ -430,8 +461,7 @@ st.markdown(
     """
     <div class="section-title">Operations overview</div>
     <div class="section-subtitle">
-        A quick health view of the warehouse control tower. Use the tabs below
-        when you want to investigate, explain, trace, approve, or explore records.
+        A quick health view of warehouse operations. Use the navigation to investigate, explain, trace, approve, or explore records.
     </div>
     """,
     unsafe_allow_html=True,
@@ -481,22 +511,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Compact navigation context
-st.markdown(
-    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
-    unsafe_allow_html=True,
-)
+# Navigation is rendered directly below the hero for immediate visibility.
 
-tabs=st.tabs([
-    "Overview",
-    "Operations",
-    "Root Cause AI",
-    "Trace Graph",
-    "Approvals",
-    "Copilot",
-    "Data Explorer",
-    "Audit",
-])
 
 with tabs[0]:
     st.subheader("Operations Overview")
