@@ -12,32 +12,25 @@ from llm import generate_root_cause, copilot_answer, copilot_workbook_answer, en
 
 st.set_page_config(page_title="IntelliWarehouse AI Control Tower", page_icon="◈", layout="wide")
 
-# Load the warehouse image from the same folder as app.py and embed it as base64.
-# This is reliable on Streamlit Cloud; CSS cannot reliably resolve a local
-# relative file such as url("bg.jpeg") from the browser.
-# IMPORTANT: keep bg.jpeg in the same GitHub folder as app.py.
-BG_PATH = Path(__file__).parent / "bg.jpeg"
-bg_data_uri = ""
-if BG_PATH.exists():
-    bg_b64 = base64.b64encode(BG_PATH.read_bytes()).decode("utf-8")
-    bg_data_uri = f"url('data:image/jpeg;base64,{bg_b64}')"
+# Warehouse background image hosted on Vecteezy.
+# Using the public image URL keeps the repository free of image assets.
+BG_URL = "https://static.vecteezy.com/system/resources/previews/030/592/227/large_2x/retail-warehouse-full-of-shelves-with-goods-in-cardboard-boxes-and-packages-logistics-sorting-and-distribution-facility-for-product-delivery-generative-ai-photo.jpeg"
 
 bg_layer = (
-    f"linear-gradient(rgba(238,244,250,.76),rgba(238,244,250,.76)), {bg_data_uri}"
-    if bg_data_uri else
-    "linear-gradient(#f4f7fb,#f4f7fb)"
+    "linear-gradient(rgba(238,244,250,.76),rgba(238,244,250,.76)), "
+    f"url('{BG_URL}')"
 )
 
 st.markdown("""
 <style>
 /* Warehouse image background */
-.stApp{{
+.stApp{
     background: __BG_LAYER__;
     background-size:cover;
     background-position:center center;
     background-attachment:fixed;
     background-repeat:no-repeat;
-}}
+}
 .block-container{max-width:1500px;padding-top:1.1rem;padding-bottom:3rem}
 
 /* Keep the background visible without reducing readability */
