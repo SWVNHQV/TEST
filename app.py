@@ -112,6 +112,22 @@ section[data-testid="stSidebar"] .stDivider{
     font-weight:600 !important;
 }
 
+
+.sidebar-group{
+    color:#74869b;
+    font-size:.67rem;
+    letter-spacing:.09em;
+    font-weight:850;
+    margin:.05rem 0 .35rem;
+}
+.sidebar-group-label{
+    color:#4f6f92;
+    font-size:.64rem;
+    letter-spacing:.10em;
+    font-weight:850;
+    margin:.6rem 0 .35rem .15rem;
+}
+
 /* ===== Sidebar workspace navigation ===== */
 .page-kicker{
     font-size:.72rem;
@@ -325,6 +341,23 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
     margin-top:6px;
 }
 
+
+/* Sidebar operation sub-navigation */
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(2),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(3),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(4){
+    margin-left:8px !important;
+    padding-left:14px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(5),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(6),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(7),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(8),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(9),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(10){
+    margin-top:1px !important;
+}
+
 /* Typography / page hierarchy */
 h1,h2,h3,h4{
     color:var(--navy) !important;
@@ -478,10 +511,14 @@ with st.sidebar:
     )
 
     st.markdown("<div class='sidebar-section-title'>WORKSPACE</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-group'>CORE</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-group-label'>OPERATIONS</div>", unsafe_allow_html=True)
     nav_options = [
         "🏠  Overview",
-        "📊  Operations",
-        "🧠  Root Cause AI",
+        "🔎  Data Quality",
+        "⚙️  Inventory & Process",
+        "🧠  Correlated Cases",
+        "🧩  Root Cause AI",
         "🔗  Trace Graph",
         "✅  Approvals",
         "💬  Copilot",
@@ -760,10 +797,7 @@ if selected_nav == '🏠  Overview':
         "Use Data Explorer when you need the underlying workbook records."
     )
 
-if selected_nav == '📊  Operations':
-    st.subheader("Prioritized operational worklist")
-    st.caption("Start here: review Critical/High findings, open Root Cause AI, then approve the proposed fix.")
-
+if selected_nav == '🔎  Data Quality':
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker'>FINDINGS</div>"
@@ -772,7 +806,6 @@ if selected_nav == '📊  Operations':
         "</div></div>",
         unsafe_allow_html=True,
     )
-
     if dq.empty:
         st.success("No data-quality findings.")
     else:
@@ -883,35 +916,217 @@ if selected_nav == '📊  Operations':
                 finding_case
             ))
 
-    st.markdown("### Inventory & Process Anomalies")
+
+if selected_nav == '⚙️  Inventory & Process':
+    st.markdown(
+        "<div class='findings-header'><div>"
+        "<div class='findings-kicker process-kicker'>OPERATIONS</div>"
+        "<div class='findings-title'>Inventory & process anomalies</div>"
+        "<div class='findings-subtitle'>Review operational exceptions, identify high-impact issues, and inspect the records behind them.</div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
     if anomalies.empty:
         st.success("No inventory/process anomalies.")
     else:
-        an_view = anomalies[["issue_id","severity","entity","title","detail","evidence"]].copy()
-        an_view["evidence"] = an_view["evidence"].apply(evidence_text)
-        an_view.columns = ["ID","Severity","Record","Issue","Explanation","Actual values"]
-        st.dataframe(an_view,width="stretch", hide_index=True)
-        st.download_button(
-            "Export anomaly findings",
-            anomalies.to_csv(index=False).encode("utf-8"),
-            "nexuschain_anomaly_findings.csv",
-            "text/csv"
+        sev = anomalies["severity"].astype(str).str.strip().str.title()
+        severity_counts = {level: int((sev == level).sum()) for level in ["Critical", "High", "Medium", "Low"]}
+
+        a1, a2, a3, a4 = st.columns(4)
+        for col, (label, count, tone) in zip(
+            [a1, a2, a3, a4],
+            [
+                ("Critical", severity_counts["Critical"], "critical"),
+                ("High", severity_counts["High"], "high"),
+                ("Medium", severity_counts["Medium"], "medium"),
+                ("Low", severity_counts["Low"], "low"),
+            ],
+        ):
+            with col:
+                st.markdown(
+                    f"<div class='finding-severity {tone}'>"
+                    f"<div class='finding-severity-label'>{label}</div>"
+                    f"<div class='finding-severity-value'>{count:,}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+        i1, i2, i3 = st.columns([1.0, 1.0, 1.8])
+        with i1:
+            anomaly_severity = st.selectbox(
+                "Severity",
+                ["All", "Critical", "High", "Medium", "Low"],
+                key="anomaly_severity_filter",
+            )
+        with i2:
+            anomaly_entities = ["All"] + sorted(anomalies["entity"].astype(str).dropna().unique().tolist())
+            anomaly_entity = st.selectbox(
+                "Record",
+                anomaly_entities,
+                key="anomaly_entity_filter",
+            )
+        with i3:
+            anomaly_search = st.text_input(
+                "Search anomaly",
+                placeholder="ID, issue, record, or explanation",
+                key="anomaly_search_filter",
+            )
+
+        filtered_anomalies = anomalies.copy()
+        if anomaly_severity != "All":
+            filtered_anomalies = filtered_anomalies[
+                filtered_anomalies["severity"].astype(str).str.title() == anomaly_severity
+            ]
+        if anomaly_entity != "All":
+            filtered_anomalies = filtered_anomalies[
+                filtered_anomalies["entity"].astype(str) == anomaly_entity
+            ]
+        if anomaly_search.strip():
+            q = anomaly_search.strip().lower()
+            mask = (
+                filtered_anomalies["issue_id"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered_anomalies["entity"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered_anomalies["title"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered_anomalies["detail"].astype(str).str.lower().str.contains(q, na=False)
+            )
+            filtered_anomalies = filtered_anomalies[mask]
+
+        st.caption(f"Showing {len(filtered_anomalies):,} of {len(anomalies):,} inventory/process anomalies")
+
+        an_view = filtered_anomalies[["issue_id","severity","entity","title","detail"]].copy()
+        an_view.columns = ["ID","Severity","Record","Issue","Explanation"]
+        an_view["Explanation"] = (
+            an_view["Explanation"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 145)
+        )
+        st.dataframe(
+            an_view,
+            width="stretch",
+            hide_index=True,
+            height=340,
+            column_config={
+                "ID": st.column_config.TextColumn("ID", width="small"),
+                "Severity": st.column_config.TextColumn("Severity", width="small"),
+                "Record": st.column_config.TextColumn("Record", width="medium"),
+                "Issue": st.column_config.TextColumn("Issue", width="medium"),
+                "Explanation": st.column_config.TextColumn("Explanation", width="large"),
+            },
         )
 
-    st.markdown("### Correlated root causes")
+        st.download_button(
+            "Export anomalies",
+            filtered_anomalies.to_csv(index=False).encode("utf-8"),
+            "intelliwarehouse_inventory_process_anomalies.csv",
+            "text/csv",
+            use_container_width=False,
+        )
+
+if selected_nav == '🧠  Correlated Cases':
+    st.markdown(
+        "<div class='findings-header'><div>"
+        "<div class='findings-kicker rca-kicker'>OPERATIONS</div>"
+        "<div class='findings-title'>Correlated root-cause cases</div>"
+        "<div class='findings-subtitle'>Prioritize cross-system cases by severity and impact before opening Root Cause AI.</div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
     if cases.empty:
         st.info("No cross-system root-cause cases detected.")
     else:
-        df=cases[["case_id","material","severity","impact_score","signals","root_cause","recommended_action"]].copy()
-        df["signals"]=df["signals"].apply(lambda x:", ".join(x))
-        df.columns=["Case","Material","Severity","Impact","Signals","Root cause","Recommended fix"]
-        st.dataframe(df,width="stretch",hide_index=True)
-        st.download_button(
-            "Export detected issues + proposed fixes",
-            df.to_csv(index=False).encode("utf-8"),
-            "nexuschain_detected_issues_and_fixes.csv",
-            "text/csv"
+        case_sev = cases["severity"].astype(str).str.strip().str.title()
+        c_counts = {level: int((case_sev == level).sum()) for level in ["Critical", "High", "Medium", "Low"]}
+
+        c1, c2, c3, c4 = st.columns(4)
+        for col, (label, count, tone) in zip(
+            [c1, c2, c3, c4],
+            [
+                ("Critical", c_counts["Critical"], "critical"),
+                ("High", c_counts["High"], "high"),
+                ("Medium", c_counts["Medium"], "medium"),
+                ("Low", c_counts["Low"], "low"),
+            ],
+        ):
+            with col:
+                st.markdown(
+                    f"<div class='finding-severity {tone}'>"
+                    f"<div class='finding-severity-label'>{label}</div>"
+                    f"<div class='finding-severity-value'>{count:,}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+        r1, r2, r3 = st.columns([1.0, 1.0, 1.8])
+        with r1:
+            case_filter = st.selectbox(
+                "Severity",
+                ["All", "Critical", "High", "Medium", "Low"],
+                key="case_severity_filter",
+            )
+        with r2:
+            material_options = ["All"] + sorted(cases["material"].astype(str).dropna().unique().tolist())
+            material_filter = st.selectbox(
+                "Material",
+                material_options,
+                key="case_material_filter",
+            )
+        with r3:
+            case_search = st.text_input(
+                "Search case",
+                placeholder="Case ID, material, signal, or root cause",
+                key="case_search_filter",
+            )
+
+        filtered_cases = cases.copy()
+        if case_filter != "All":
+            filtered_cases = filtered_cases[
+                filtered_cases["severity"].astype(str).str.title() == case_filter
+            ]
+        if material_filter != "All":
+            filtered_cases = filtered_cases[
+                filtered_cases["material"].astype(str) == material_filter
+            ]
+        if case_search.strip():
+            q = case_search.strip().lower()
+            mask = (
+                filtered_cases["case_id"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered_cases["material"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered_cases["signals"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered_cases["root_cause"].astype(str).str.lower().str.contains(q, na=False)
+            )
+            filtered_cases = filtered_cases[mask]
+
+        st.caption(f"Showing {len(filtered_cases):,} of {len(cases):,} correlated cases")
+
+        case_view = filtered_cases[
+            ["case_id","material","severity","impact_score","signals","root_cause","recommended_action"]
+        ].copy()
+        case_view["signals"] = case_view["signals"].apply(lambda x: ", ".join(x) if isinstance(x, (list, tuple)) else str(x))
+        case_view["root_cause"] = case_view["root_cause"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 125)
+        case_view["recommended_action"] = case_view["recommended_action"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 110)
+        case_view.columns = ["Case","Material","Severity","Impact","Signals","Root cause","Recommended fix"]
+        st.dataframe(
+            case_view,
+            width="stretch",
+            hide_index=True,
+            height=360,
+            column_config={
+                "Case": st.column_config.TextColumn("Case", width="small"),
+                "Material": st.column_config.TextColumn("Material", width="small"),
+                "Severity": st.column_config.TextColumn("Severity", width="small"),
+                "Impact": st.column_config.NumberColumn("Impact", format="%d"),
+                "Signals": st.column_config.TextColumn("Signals", width="medium"),
+                "Root cause": st.column_config.TextColumn("Root cause", width="large"),
+                "Recommended fix": st.column_config.TextColumn("Recommended fix", width="large"),
+            },
         )
+        st.download_button(
+            "Export correlated cases",
+            filtered_cases.to_csv(index=False).encode("utf-8"),
+            "intelliwarehouse_correlated_cases.csv",
+            "text/csv",
+        )
+
 
 if selected_nav == '🧠  Root Cause AI':
     st.subheader("Root Cause AI")
