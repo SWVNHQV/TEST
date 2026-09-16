@@ -188,6 +188,84 @@ def _is_general_copilot_question(question: str) -> bool:
     return not any(term.replace(" ", "") in qn for term in rca_terms)
 
 
+def explain_finding(finding_context: dict, model: str | None = None) -> str:
+    """Explain exactly one finding from its connected evidence.
+
+    This path is intentionally narrower than general Copilot: it sends only the
+    selected finding plus its connected records/related findings to the LLM.
+    That prevents the model from accidentally mixing another DQ/anomaly row into
+    the explanation when the workbook contains many similar issues.
+    """
+    if not enabled():
+        # Keep this explicit rather than silently pretending an AI explanation exists.
+        raise RuntimeError(
+            "VW Group LLMaaS is not configured. Add VW_IDP_CLIENT_ID, "
+            "VW_IDP_CLIENT_SECRET, and LLM_API_CLIENT_ID to Streamlit Secrets."
+        )
+
+    model = model or _secret("OPENAI_MODEL", "gpt-4o")
+    client = _client()
+
+    issue_id = str(finding_context.get("issue_id", "")).strip()
+    exact_evidence = finding_context.get("exact_finding_evidence", {})
+    connected = finding_context.get("connected_workbook_records", {})
+    related = finding_context.get("related_findings", [])
+
+    prompt = f"""
+Explain ONE specific warehouse finding for an operations user.
+
+SELECTED FINDING — THIS IS THE ONLY FINDING BEING EXPLAINED
+Issue ID: {issue_id}
+Finding type: {finding_context.get('finding_type')}
+Severity: {finding_context.get('severity')}
+Record: {finding_context.get('entity')}
+Issue title: {finding_context.get('title')}
+Finding detail: {finding_context.get('detail')}
+
+EXACT FINDING EVIDENCE:
+{json.dumps(exact_evidence, indent=2, default=str)}
+
+CONNECTED WORKBOOK RECORDS FOR THIS FINDING:
+{json.dumps(connected, indent=2, default=str)}
+
+RELATED FINDINGS (OPTIONAL SUPPORT ONLY):
+{json.dumps(related, indent=2, default=str)}
+
+STRICT RULES:
+1. Explain ONLY {issue_id}. Do not substitute, merge, or rename the selected finding.
+2. Use only the evidence supplied above.
+3. Preserve exact IDs, quantities, dates, statuses, material, plant, and field names.
+4. Never invent transactions, causes, records, customers, vendors, or business events.
+5. Distinguish confirmed facts from inference.
+6. Do not infer that a positive stock row is the cause of a negative row unless the supplied evidence supports that relationship.
+7. Do not introduce any issue ID that is not present in the supplied context.
+8. Do not produce a table of unrelated findings.
+9. Related findings may be mentioned only in a clearly separate section and only when directly relevant.
+10. Recommendations are proposals only; never claim that an action was executed.
+
+Return exactly these sections:
+### Finding
+State what {issue_id} means in plain operational language.
+
+### Exact Evidence
+Name the source sheet(s) and quote the exact workbook values that establish the finding.
+
+### Why It Matters
+Explain the operational risk. Clearly label inference where appropriate.
+
+### Related Risks
+Only risks that follow from the selected finding. Do not list unrelated DQ/anomaly records here.
+
+### Safest Next Step
+Give practical verification/remediation steps based only on the evidence.
+
+### Summary
+One concise sentence about {issue_id}.
+"""
+
+    return _chat(client, model, SYSTEM_PROMPT, prompt)
+
+
 def copilot_answer(question: str, case: dict | None = None, model: str | None = None) -> str:
     """General-purpose Copilot entry point.
 
