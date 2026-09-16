@@ -66,7 +66,17 @@ def get_token() -> str:
         },
         timeout=30.0,
     )
-    response.raise_for_status()
+    if response.status_code != 200:
+        detail = ""
+        try:
+            payload = response.json()
+            detail = str(payload.get("error_description") or payload.get("error") or "").strip()
+        except Exception:
+            detail = ""
+        msg = f"VW IDP token request failed (HTTP {response.status_code})."
+        if detail:
+            msg += f" {detail}"
+        raise RuntimeError(msg)
 
     token_data = response.json()
     access_token = token_data.get("access_token")
@@ -84,6 +94,12 @@ def enabled() -> bool:
         and _secret("VW_IDP_CLIENT_SECRET")
         and _secret("LLM_API_CLIENT_ID")
     )
+
+
+
+def llm_configured() -> bool:
+    """Public helper for the UI to check whether LLMaaS credentials exist."""
+    return enabled()
 
 
 def _client():
@@ -139,9 +155,12 @@ def _llm_complete(
 
 
 def generate_root_cause(case: dict, model: str | None = None) -> str:
-    """Generate a concise, evidence-grounded RCA decision brief for the selected case."""
+    """Generate a concise, evidence-grounded RCA decision brief using VW Group LLMaaS."""
     if not enabled():
-        return fallback_root_cause(case)
+        raise RuntimeError(
+            "VW Group LLMaaS is not configured. Set VW_IDP_CLIENT_ID, "
+            "VW_IDP_CLIENT_SECRET, and LLM_API_CLIENT_ID in Streamlit Secrets."
+        )
 
     model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
 
