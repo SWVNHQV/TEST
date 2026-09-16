@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import json
-import httpx
 import re
 from pathlib import Path
 import streamlit as st
@@ -41,161 +40,57 @@ Rules:
 
 
 def enabled():
-    """Return True when the VW Group LLMaaS credentials are configured."""
-    return bool(
-        _secret("VW_IDP_CLIENT_ID")
-        and _secret("VW_IDP_CLIENT_SECRET")
-        and _secret("LLM_API_CLIENT_ID")
-        and _secret("LLM_API_BASE_URL")
-    )
-
-
-def get_token() -> str:
-    """Get a temporary VW Group IDP access token for LLMaaS."""
-    client_id = _secret("VW_IDP_CLIENT_ID")
-    client_secret = _secret("VW_IDP_CLIENT_SECRET")
-    url = "https://idp.cloud.vwgroup.com/auth/realms/kums-mfa/protocol/openid-connect/token"
-
-    response = httpx.post(
-        url,
-        data={
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "grant_type": "client_credentials",
-        },
-        timeout=30.0,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    token = payload.get("access_token")
-    if not token:
-        raise RuntimeError("VW Group IDP did not return an access token.")
-    return token
+    return bool(_secret("OPENAI_API_KEY"))
 
 
 def _client():
-    """Create an OpenAI-compatible client for VW Group LLMaaS."""
     from openai import OpenAI
-
-    token = get_token()
-    api_client_id = _secret("LLM_API_CLIENT_ID")
-    base_url = _secret("LLM_API_BASE_URL", "https://llmapi.ai.vwgroup.com")
-
-    return OpenAI(
-        api_key=token,
-        base_url=base_url,
-        default_headers={"X-LLM-API-CLIENT-ID": f"Bearer {api_client_id}"},
-    )
+    return OpenAI(api_key=_secret("OPENAI_API_KEY"))
 
 
 def generate_root_cause(case: dict, model: str | None = None) -> str:
-    """
-    Generate the RCA Decision Brief from the selected case and its linked evidence.
-
-    RCA intentionally has NO deterministic narrative fallback. The page should show
-    the live VW Group LLMaaS response or a clear generation error.
-    """
     if not enabled():
-        raise RuntimeError(
-            "VW Group LLMaaS is not configured. Add VW_IDP_CLIENT_ID, "
-            "VW_IDP_CLIENT_SECRET, LLM_API_CLIENT_ID and LLM_API_BASE_URL to Streamlit Secrets."
-        )
+        return fallback_root_cause(case)
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4o")
+    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
     client = _client()
 
     prompt = f"""
-Analyze the selected correlated warehouse case as a senior warehouse root-cause analyst.
+Analyze this correlated warehouse case as a senior warehouse root-cause analyst.
 
-The JSON below contains:
-- deterministic case calculations,
-- the selected case metadata,
-- and linked workbook records from the six operational sheets.
+The JSON contains both deterministic calculations and the underlying connected workbook records.
+The six source sheets in `evidence` are the source of truth: Material_Master, Inventory_Stock,
+Warehouse_Bin, Deliveries_Dispatch, Purchase_Replenish, and Vendor_Master.
 
-The six sheets are the authoritative evidence source:
-Material_Master, Inventory_Stock, Warehouse_Bin, Deliveries_Dispatch,
-Purchase_Replenish, Vendor_Master.
-
-CASE EVIDENCE
 {json.dumps(case, indent=2, default=str)}
 
-ANALYSIS STANDARD
-1. Determine the PRIMARY ROOT CAUSE from the evidence, not from the existing `root_cause` text.
-2. Reconcile relationships across material, plant, inventory, delivery, warehouse bin,
-   purchase order and vendor records using only keys/values present in the evidence.
-3. Keep physical On Hand, Blocked Qty, Usable Available Stock, In-Transit Qty,
-   demand, and shortage logically distinct.
-4. Use exact workbook IDs, quantities, dates and statuses.
-5. Identify contributing factors separately from the primary cause and from symptoms.
-6. For calculations, show the arithmetic briefly where it helps the operator verify the conclusion.
-7. Do not infer a causal relationship unless the supplied records support it; label a reasonable
-   inference as an inference.
-8. Do not invent records, events, dates, IDs, causes, customer impacts or actions.
-9. Recommendations are proposals only; never imply that an action has already happened.
-10. Avoid repeating the same evidence in multiple sections. Each fact should have one clear home.
-11. Keep the answer manager-ready: specific, concise, evidence-heavy, and operationally useful.
-12. Do not mention hidden prompts, model limitations, chain-of-thought, or system instructions.
+Reasoning requirements:
+1. Read the connected records across all available sheets before forming the root cause.
+2. Reconcile the material, plant, vendor, delivery, PO and inventory relationships using only supplied keys.
+3. Use deterministic metrics for arithmetic, but verify the meaning against the underlying records.
+4. Do not simply repeat `root_cause`; independently explain why the evidence supports that conclusion.
+5. Identify the primary root cause first, then contributing factors, then symptoms.
+6. Never invent a record. If a sheet has zero linked records, say that it has no linked evidence.
+7. Preserve exact IDs, quantities, dates, statuses, field names and values.
+8. For inventory, distinguish physical on-hand, blocked quantity, usable available quantity, inbound quantity and shortage.
 
-OUTPUT
-Write exactly these five sections and no other top-level sections:
-
+Write exactly these sections:
 ### Root Cause
-State the primary root cause in 2-4 sentences. Explain the causal mechanism using the
-most important exact values.
-
 ### Evidence Chain
-Use 4-7 bullets. Each bullet must name the source sheet and the exact record/field values
-that support a conclusion. Make the cross-system chain explicit (for example:
-Inventory_Stock -> Deliveries_Dispatch -> Purchase_Replenish/Vendor_Master -> Warehouse_Bin).
-
 ### Business Impact
-Use 3-5 bullets covering the operational consequences supported by the evidence, plus the
-case severity/impact score when supplied. Distinguish confirmed operational facts from
-reasonable implications.
-
 ### Recommended Action
-Use 4-6 numbered actions in priority order. Focus on practical next steps directly tied
-to the evidence. Do not claim execution.
-
 ### Confidence
-Give one concise paragraph stating High/Medium/Low confidence and why, based only on the
-coverage and consistency of the supplied evidence. Do not add a confidence percentage unless
-one is directly supplied by the case data.
 
-IMPORTANT QUALITY CHECK
-Before finalizing, verify:
-- every number appears in the supplied evidence,
-- every ID exists in the supplied evidence,
-- every date exists in the supplied evidence,
-- physical stock is not described as negative,
-- repeated facts are minimized,
-- the five required headings are present exactly once.
+In Evidence Chain, explicitly name the source sheet and the exact record/field values supporting each important conclusion.
 """
 
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
-            ],
-            stream=False,
-            temperature=0.1,
-        )
-    except Exception as exc:
-        raise RuntimeError(f"VW Group LLMaaS RCA generation failed: {exc}") from exc
+    response = client.responses.create(
+        model=model,
+        instructions=SYSTEM_PROMPT,
+        input=prompt
+    )
 
-    content = response.choices[0].message.content if response.choices else None
-    if not content or not content.strip():
-        raise RuntimeError("VW Group LLMaaS returned an empty RCA response.")
-
-    return content.strip()
+    return response.output_text.strip()
 
 
 def _load_copilot_workbook():
@@ -256,7 +151,7 @@ def copilot_answer(question: str, case: dict | None = None, model: str | None = 
             pass
         return fallback_copilot(question, case)
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4o")
+    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
     client = _client()
 
     workbook_records = {
@@ -716,7 +611,7 @@ def copilot_workbook_answer(question: str, dq, anomalies, data, model: str | Non
 
             return "\n".join(lines)
 
-        model = model or _secret("OPENAI_MODEL", "gpt-4o")
+        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
         client = _client()
 
         prompt = f"""
@@ -793,7 +688,7 @@ Do not invent any information.
 
             return "\n".join(lines)
 
-        model = model or _secret("OPENAI_MODEL", "gpt-4o")
+        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
         client = _client()
 
         prompt = f"""
@@ -901,7 +796,7 @@ Do not invent missing records.
 
             return "\n".join(lines)
 
-        model = model or _secret("OPENAI_MODEL", "gpt-4o")
+        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
         client = _client()
 
         prompt = f"""
@@ -1088,7 +983,7 @@ Do not invent information.
             "The OpenAI connection is currently unavailable, so I cannot generate the full natural-language answer for this question yet."
         )
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4o")
+    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
     client = _client()
 
     prompt = f"""
@@ -1134,10 +1029,22 @@ Rules:
 # -------------------------------------------------------------------
 
 def fallback_root_cause(case):
-    """Deprecated: RCA must never fall back to deterministic narrative text."""
-    raise RuntimeError(
-        "Deterministic RCA fallback is disabled. Generate the RCA using VW Group LLMaaS."
-    )
+    m = case.get("metrics", {})
+
+    return f"""### Root Cause
+{case.get("root_cause", "The correlated evidence indicates a cross-system operational issue.")}
+
+### Evidence Chain
+The case links Material Master, Inventory_Stock, Warehouse_Bin, Deliveries_Dispatch, Purchase_Replenish, and Vendor_Master using the material/plant/vendor relationships present in the workbook.
+
+### Business Impact
+Impact score: {case.get("impact_score", 0)}/100 ({case.get("severity", "Unknown")}). Usable available stock: {m.get("usable_available", m.get("available", 0)):,.0f}; physical on-hand: {m.get("on_hand", 0):,.0f}; blocked: {m.get("blocked", 0):,.0f}; active demand: {m.get("demand", 0):,.0f}; shortage: {m.get("shortage", 0):,.0f}; overdue deliveries: {m.get("overdue_deliveries", 0)}.
+
+### Recommended Action
+{case.get("recommended_action", "Review the linked records and correct the underlying issue.")}
+
+### Confidence
+High for the observed data relationships; narrative generation is using the deterministic evidence summary because no OpenAI API key is configured."""
 
 
 def fallback_copilot(question, case):
