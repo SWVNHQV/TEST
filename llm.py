@@ -209,7 +209,7 @@ def explain_finding(finding_context: dict, model: str | None = None) -> str:
     issue_id = str(finding_context.get("issue_id", "")).strip()
     exact_evidence = finding_context.get("exact_finding_evidence", {})
     connected = finding_context.get("connected_workbook_records", {})
-    related = finding_context.get("related_findings", [])
+    related = []
 
     prompt = f"""
 Explain ONE specific warehouse finding for an operations user.
@@ -228,19 +228,16 @@ EXACT FINDING EVIDENCE:
 CONNECTED WORKBOOK RECORDS FOR THIS FINDING:
 {json.dumps(connected, indent=2, default=str)}
 
-RELATED FINDINGS (OPTIONAL SUPPORT ONLY):
-{json.dumps(related, indent=2, default=str)}
-
 STRICT RULES:
 1. Explain ONLY {issue_id}. Do not substitute, merge, or rename the selected finding.
 2. Use only the evidence supplied above.
 3. Preserve exact IDs, quantities, dates, statuses, material, plant, and field names.
 4. Never invent transactions, causes, records, customers, vendors, or business events.
 5. Distinguish confirmed facts from inference.
-6. Do not infer that a positive stock row is the cause of a negative row unless the supplied evidence supports that relationship.
-7. Do not introduce any issue ID that is not present in the supplied context.
-8. Do not produce a table of unrelated findings.
-9. Related findings may be mentioned only in a clearly separate section and only when directly relevant.
+6. Do not infer that one connected workbook row is the cause of another unless the supplied evidence supports that relationship.
+7. The ONLY issue ID that may appear in the answer is the selected issue ID: {issue_id}.
+8. Do not output any DQ/AN issue list or unrelated finding table.
+9. Do not mention other anomaly IDs, other DQ IDs, or unrelated records.
 10. Recommendations are proposals only; never claim that an action was executed.
 
 Return exactly these sections:
@@ -263,7 +260,29 @@ Give practical verification/remediation steps based only on the evidence.
 One concise sentence about {issue_id}.
 """
 
-    return _chat(client, model, SYSTEM_PROMPT, prompt)
+    answer = _chat(client, model, SYSTEM_PROMPT, prompt)
+
+    # Defensive output guard: an exact-finding explanation must never leak
+    # another DQ/AN issue ID or an unrelated markdown finding table.
+    allowed_id = issue_id.upper()
+    lines = answer.splitlines()
+    cleaned = []
+    for line in lines:
+        ids = re.findall(r"\b(?:DQ|AN)-\d+\b", line.upper())
+        if ids and any(x != allowed_id for x in ids):
+            # Drop unrelated issue-ID lines/tables from the model response.
+            continue
+        cleaned.append(line)
+    answer = "\n".join(cleaned).strip()
+
+    # Remove a trailing markdown finding table if one was nevertheless produced.
+    answer = re.sub(
+        r"(?ms)\n\|\s*(?:DQ|AN)-\d+.*$",
+        "",
+        answer,
+        flags=re.I,
+    ).strip()
+    return answer
 
 
 def copilot_answer(question: str, case: dict | None = None, model: str | None = None) -> str:
