@@ -222,6 +222,30 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
     letter-spacing:.04em;
 }
 
+
+/* ===== Root Cause AI workspace ===== */
+.rca-workspace-head{
+    margin:8px 0 14px;
+}
+.rca-workspace-kicker{
+    color:#7044c5;
+    font-size:.70rem;
+    font-weight:850;
+    letter-spacing:.10em;
+}
+.rca-workspace-title{
+    color:#123f6b;
+    font-size:1.65rem;
+    font-weight:850;
+    line-height:1.1;
+    margin-top:3px;
+}
+.rca-workspace-subtitle{
+    color:#6b7e96;
+    font-size:.84rem;
+    margin-top:5px;
+}
+
 /* ===== Operations summary cards ===== */
 .ops-summary-card{
     position:relative;
@@ -487,6 +511,9 @@ div[data-testid="stDataFrame"] *{
 if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
 if "ai_cache" not in st.session_state: st.session_state.ai_cache={}
+
+if "ai_error" not in st.session_state:
+    st.session_state.ai_error = None
 
 
 st.markdown("""
@@ -1130,9 +1157,15 @@ if 'Correlated Cases' in str(selected_nav):
         )
 
 
-if selected_nav == '🧠  Root Cause AI':
-    st.subheader("Root Cause AI")
-    st.caption("Decision-focused view — only the evidence needed to understand and act on the selected case.")
+if 'Root Cause AI' in str(selected_nav):
+    st.markdown(
+        "<div class='rca-workspace-head'>"
+        "<div class='rca-workspace-kicker'>AI INVESTIGATION</div>"
+        "<div class='rca-workspace-title'>Root Cause AI</div>"
+        "<div class='rca-workspace-subtitle'>Select a correlated case to inspect the evidence, understand the cause, and generate an explanation.</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     if cases.empty:
         st.info("No correlated cases available.")
@@ -1171,7 +1204,24 @@ if selected_nav == '🧠  Root Cause AI':
 
         if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}"):
             with st.spinner("AI is synthesizing the case evidence..."):
-                st.session_state.ai_cache[cid] = generate_root_cause(case)
+                try:
+                    st.session_state.ai_cache[cid] = generate_root_cause(case)
+                    st.session_state.ai_error = None
+                except Exception as exc:
+                    # Keep the investigation usable even when the external LLM
+                    # endpoint rejects credentials or is temporarily unavailable.
+                    st.session_state.ai_cache[cid] = (
+                        f"**Evidence-grounded explanation:** "
+                        f"{case.get('root_cause', 'No root-cause explanation is available for this case.')}"
+                    )
+                    st.session_state.ai_error = (
+                        "AI explanation could not be generated from the VW LLMaaS endpoint. "
+                        "The app is showing the workbook-backed root-cause explanation instead."
+                    )
+
+        if st.session_state.get("ai_error"):
+            st.info(st.session_state.ai_error)
+
         if cid in st.session_state.ai_cache:
             st.markdown(st.session_state.ai_cache[cid])
 
