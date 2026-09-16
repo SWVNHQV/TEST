@@ -196,6 +196,70 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
 }
 
 
+
+/* ===== Operations summary cards ===== */
+.ops-summary-card{
+    position:relative;
+    min-height:116px;
+    padding:15px 17px 14px 19px;
+    border-radius:15px;
+    background:rgba(255,255,255,.96);
+    border:1px solid #d6e1ec;
+    box-shadow:0 6px 17px rgba(19,52,85,.08);
+    overflow:hidden;
+}
+.ops-summary-card::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:5px;
+}
+.ops-summary-card.dq::before{background:#d84b45;}
+.ops-summary-card.process::before{background:#dc941f;}
+.ops-summary-card.rca::before{background:#7448c6;}
+.ops-summary-card.approval::before{background:#2b73ba;}
+
+.ops-summary-top{
+    display:flex;
+    align-items:center;
+    gap:9px;
+}
+.ops-summary-step{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:27px;
+    height:27px;
+    border-radius:8px;
+    background:#edf3f9;
+    color:#67809a;
+    font-size:.68rem;
+    font-weight:850;
+}
+.ops-summary-card.dq .ops-summary-step{background:#fdeceb;color:#bd3e39;}
+.ops-summary-card.process .ops-summary-step{background:#fff2dd;color:#b9780d;}
+.ops-summary-card.rca .ops-summary-step{background:#f0eaff;color:#6740b4;}
+.ops-summary-card.approval .ops-summary-step{background:#e8f2fb;color:#2465a2;}
+
+.ops-summary-title{
+    color:#3d536d;
+    font-size:.82rem;
+    font-weight:800;
+}
+.ops-summary-value{
+    color:#153b64;
+    font-size:2.15rem;
+    font-weight:850;
+    line-height:1;
+    letter-spacing:-.8px;
+    margin-top:12px;
+}
+.ops-summary-subtitle{
+    color:#7a899b;
+    font-size:.73rem;
+    margin-top:7px;
+}
+
 /* ===== Findings workspace ===== */
 .findings-header{
     display:flex;
@@ -667,16 +731,35 @@ if selected_nav == '📊  Operations':
     st.subheader("Prioritized operational worklist")
     st.caption("Start here: review Critical/High findings, open Root Cause AI, then approve the proposed fix.")
 
-    # Fixed-scope coverage: bad/missing master data and inventory/process anomalies.
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Data quality", len(dq))
-    c2.metric("Process anomalies", len(anomalies))
-    c3.metric("Root-cause cases", len(cases))
+    # Four primary operational signals for rapid triage.
     pending = sum(
         1 for _, _case in cases.iterrows()
         if st.session_state.actions.get(str(_case.get("case_id", "")).strip(), {}).get("status") == "Pending"
     ) if cases is not None and not cases.empty else 0
-    c4.metric("Pending approval", pending)
+
+    ops_metrics = [
+        ("dq", "Data quality", len(dq), "Data-quality findings", "01"),
+        ("process", "Process anomalies", len(anomalies), "Operational exceptions", "02"),
+        ("rca", "Root-cause cases", len(cases), "Correlated investigations", "03"),
+        ("approval", "Pending approval", pending, "Awaiting human decision", "04"),
+    ]
+
+    metric_cols = st.columns(4)
+    for col, (tone, title, value, subtitle, step) in zip(metric_cols, ops_metrics):
+        with col:
+            st.markdown(
+                f"""
+                <div class="ops-summary-card {tone}">
+                    <div class="ops-summary-top">
+                        <span class="ops-summary-step">{step}</span>
+                        <span class="ops-summary-title">{title}</span>
+                    </div>
+                    <div class="ops-summary-value">{value:,}</div>
+                    <div class="ops-summary-subtitle">{subtitle}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     st.markdown(
         "<div class='findings-header'><div>"
