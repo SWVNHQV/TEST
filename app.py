@@ -223,281 +223,75 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
 }
 
 
-/* ===== Root Cause AI workspace ===== */
-.rca-workspace-head{
-    margin:8px 0 14px;
-}
-.rca-workspace-kicker{
-    color:#7044c5;
-    font-size:.70rem;
-    font-weight:850;
-    letter-spacing:.10em;
-}
-.rca-workspace-title{
-    color:#123f6b;
-    font-size:1.65rem;
-    font-weight:850;
-    line-height:1.1;
-    margin-top:3px;
-}
-.rca-workspace-subtitle{
-    color:#6b7e96;
-    font-size:.84rem;
-    margin-top:5px;
-}
-
-/* ===== Operations summary cards ===== */
-.ops-summary-card{
-    position:relative;
-    min-height:116px;
-    padding:15px 17px 14px 19px;
-    border-radius:15px;
-    background:rgba(255,255,255,.96);
-    border:1px solid #d6e1ec;
-    box-shadow:0 6px 17px rgba(19,52,85,.08);
-    overflow:hidden;
-}
-.ops-summary-card::before{
-    content:"";
-    position:absolute;
-    left:0; top:0; bottom:0;
-    width:5px;
-}
-.ops-summary-card.dq::before{background:#d84b45;}
-.ops-summary-card.process::before{background:#dc941f;}
-.ops-summary-card.rca::before{background:#7448c6;}
-.ops-summary-card.approval::before{background:#2b73ba;}
-
-.ops-summary-top{
-    display:flex;
-    align-items:center;
-    gap:9px;
-}
-.ops-summary-step{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width:27px;
-    height:27px;
-    border-radius:8px;
-    background:#edf3f9;
-    color:#67809a;
-    font-size:.68rem;
-    font-weight:850;
-}
-.ops-summary-card.dq .ops-summary-step{background:#fdeceb;color:#bd3e39;}
-.ops-summary-card.process .ops-summary-step{background:#fff2dd;color:#b9780d;}
-.ops-summary-card.rca .ops-summary-step{background:#f0eaff;color:#6740b4;}
-.ops-summary-card.approval .ops-summary-step{background:#e8f2fb;color:#2465a2;}
-
-.ops-summary-title{
-    color:#3d536d;
-    font-size:.82rem;
-    font-weight:800;
-}
-.ops-summary-value{
-    color:#153b64;
-    font-size:2.15rem;
-    font-weight:850;
-    line-height:1;
-    letter-spacing:-.8px;
-    margin-top:12px;
-}
-.ops-summary-subtitle{
-    color:#7a899b;
-    font-size:.73rem;
-    margin-top:7px;
-}
-
-/* ===== Findings workspace ===== */
-.findings-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:end;
-    margin:14px 0 8px;
-}
-.findings-kicker{
-    color:#7b4bc4;
-    font-size:.68rem;
-    font-weight:850;
-    letter-spacing:.10em;
-}
-.findings-title{
-    color:#163f6a;
-    font-size:1.28rem;
-    font-weight:850;
-    margin-top:2px;
-}
-.findings-subtitle{
-    color:#71829a;
-    font-size:.82rem;
-    margin-top:3px;
-}
-.finding-severity{
-    position:relative;
-    min-height:82px;
-    padding:13px 15px;
-    border-radius:13px;
-    background:rgba(255,255,255,.96);
-    border:1px solid #d9e3ed;
-    box-shadow:0 4px 12px rgba(22,54,88,.06);
-    overflow:hidden;
-}
-.finding-severity::before{
-    content:"";
-    position:absolute;
-    left:0; top:0; bottom:0; width:4px;
-}
-.finding-severity.critical::before{background:#d64545;}
-.finding-severity.high::before{background:#e39a20;}
-.finding-severity.medium::before{background:#4679be;}
-.finding-severity.low::before{background:#6e7f92;}
-.finding-severity-label{
-    color:#6d7d92;
-    font-size:.76rem;
-    font-weight:750;
-}
-.finding-severity-value{
-    color:#173b63;
-    font-size:1.65rem;
-    font-weight:850;
-    line-height:1.05;
-    margin-top:6px;
-}
 
 
-/* Sidebar operation sub-navigation */
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(2),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(3),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(4){
-    margin-left:8px !important;
-    padding-left:14px !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(5),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(6),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(7),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(8),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(9),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(10){
-    margin-top:1px !important;
-}
+/* ===== Root Cause AI final HCI treatment ===== */
+.rca-page-head{margin:8px 0 12px}
+.rca-page-kicker{color:#7044c5;font-size:.68rem;font-weight:850;letter-spacing:.10em}
+.rca-page-title{color:#123f6b;font-size:1.65rem;font-weight:850;line-height:1.1;margin-top:3px}
+.rca-page-subtitle{color:#6f8299;font-size:.84rem;margin-top:5px}
 
-/* Typography / page hierarchy */
-h1,h2,h3,h4{
-    color:var(--navy) !important;
-    font-weight:800 !important;
+.rca-case-strip{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;
+    padding:15px 18px;margin:7px 0 14px;
+    background:rgba(255,255,255,.97);border:1px solid #d5e1ec;border-radius:14px;
+    box-shadow:0 5px 15px rgba(18,54,95,.07);
 }
-h2{font-size:1.55rem !important;}
-h3{font-size:1.16rem !important;}
-.stCaption, .muted{color:var(--muted) !important;}
-.section-subtitle{color:#6b7c92 !important;}
-.section-title{color:var(--navy) !important;font-size:1.45rem !important;font-weight:820 !important;}
+.rca-label{color:#7a8a9e;font-size:.64rem;font-weight:850;letter-spacing:.09em}
+.rca-case-id{color:#173e67;font-size:1.28rem;font-weight:850;margin-top:2px}
+.rca-material{color:#75869a;font-size:.77rem;margin-top:2px}
+.rca-case-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rca-severity,.rca-impact{
+    display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;
+    font-size:.75rem;font-weight:800;border:1px solid #d7e1eb;background:#f6f8fb;color:#485c74
+}
+.rca-severity.critical{background:#fff0ef;color:#b83f39;border-color:#f2cfcc}
+.rca-severity.high{background:#fff5e4;color:#a76a09;border-color:#f1ddbc}
+.rca-severity.medium{background:#eef4fc;color:#326aa3;border-color:#cfdded}
 
-/* Surface components */
-.card,.overview-card,.health-card{
-    background:var(--panel) !important;
-    border:1px solid var(--line) !important;
-    box-shadow:0 6px 18px rgba(20,52,88,.07) !important;
+.rca-panel{
+    padding:16px 17px;background:rgba(255,255,255,.96);
+    border:1px solid #d7e2ec;border-radius:14px;
+    box-shadow:0 5px 14px rgba(18,54,95,.06);margin-bottom:13px;
 }
-.overview-card{
-    border-radius:16px !important;
-    padding:15px 16px 14px !important;
-    min-height:134px !important;
+.rca-cause{border-left:4px solid #7548c6}
+.rca-evidence{border-left:4px solid #2f73b7}
+.rca-action{border-left:4px solid #15986f}
+.rca-impact-panel{border-left:4px solid #d48b1b}
+.rca-panel-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.rca-panel-icon{width:31px;height:31px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#eef4fa;font-size:16px}
+.rca-panel-kicker{color:#7a8a9d;font-size:.62rem;font-weight:850;letter-spacing:.09em}
+.rca-panel-title{color:#183f67;font-size:.98rem;font-weight:850;margin-top:2px}
+.rca-cause-copy{color:#344f6f;font-size:.88rem;line-height:1.55}
+.rca-evidence-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;color:#3d5570;font-size:.80rem;line-height:1.35;border-bottom:1px solid #edf1f5}
+.rca-evidence-row:last-child{border-bottom:0}
+.rca-check{color:#2b78bb;font-weight:900}
+.rca-muted{color:#7b8b9e;font-size:.80rem}
+.rca-action-copy{
+    color:#315960;font-size:.84rem;line-height:1.48;
+    padding:11px 12px;background:#eef9f4;border:1px solid #d5ece1;border-radius:10px;
 }
-.overview-card .label{
-    color:#61738a !important;
-    font-size:.87rem !important;
-    font-weight:700 !important;
-}
-.overview-card .value{
-    color:#172c46 !important;
-    font-size:1.9rem !important;
-    font-weight:850 !important;
-}
-.overview-card .desc{
-    color:#738399 !important;
-    font-size:.78rem !important;
-}
-.priority-strip{
-    background:rgba(255,255,255,.94) !important;
-    border:1px solid var(--line) !important;
-    border-radius:13px !important;
-    box-shadow:0 3px 12px rgba(20,52,88,.06) !important;
-}
-.overview-note{
-    background:rgba(235,243,252,.94) !important;
-    border:1px solid #d1e0ef !important;
-    color:#506783 !important;
-    border-radius:13px !important;
-}
+.rca-impact-score{color:#183e66;font-size:1.8rem;font-weight:850;line-height:1;margin:3px 0 10px}
+.rca-impact-score span{color:#7b8c9f;font-size:.78rem;font-weight:700}
+.rca-impact-track{height:8px;border-radius:99px;background:#e8eef4;overflow:hidden}
+.rca-impact-fill{height:100%;border-radius:99px;background:#d48b1b}
+.rca-impact-note{color:#8090a2;font-size:.69rem;margin-top:6px}
 
-/* Inputs, buttons and expanders */
-.stButton > button{
-    border-radius:9px !important;
-    font-weight:750 !important;
-    color:#123b66 !important;
-    background:#fff !important;
-    border:1px solid #b9cbdd !important;
+.rca-ai-box{
+    padding:14px 16px;margin-top:2px;
+    background:linear-gradient(135deg,rgba(238,246,255,.97),rgba(248,245,255,.97));
+    border:1px solid #cedded;border-radius:14px;
 }
-.stButton > button[kind="primary"]{
-    color:#fff !important;
-    background:#1769b0 !important;
-    border-color:#1769b0 !important;
+.rca-ai-kicker{color:#7044c5;font-size:.62rem;font-weight:850;letter-spacing:.09em}
+.rca-ai-title{color:#183f67;font-size:.96rem;font-weight:850;margin-top:2px}
+.rca-ai-copy{color:#73859a;font-size:.73rem;margin-top:4px;line-height:1.35}
+.rca-ai-output{
+    padding:15px 17px;margin:9px 0 13px;
+    background:#f7f4ff;border:1px solid #ded5f1;border-radius:13px;
+    color:#334c6a;line-height:1.55;font-size:.86rem;
 }
-.stButton > button:hover{
-    border-color:#2d72af !important;
-    box-shadow:0 3px 9px rgba(20,52,88,.10) !important;
-}
-div[data-testid="stExpander"]{
-    background:rgba(255,255,255,.84) !important;
-    border:1px solid #cedbe8 !important;
-    border-radius:12px !important;
-}
+.rca-ai-output-copy{margin-top:5px}
 
-/* Data tables */
-div[data-testid="stDataFrame"]{
-    border:1px solid #d3dfeb !important;
-    border-radius:12px !important;
-    overflow:hidden !important;
-    background:rgba(255,255,255,.95) !important;
-}
-div[data-testid="stDataFrame"] *{
-    font-size:13px !important;
-}
-
-/* RCA */
-.rca-header{
-    background:rgba(255,255,255,.96) !important;
-    border:1px solid #d8e2ed !important;
-    box-shadow:0 6px 18px rgba(20,52,88,.07) !important;
-}
-.ai{
-    background:rgba(246,242,255,.95) !important;
-    border:1px solid #ddd2f7 !important;
-}
-.good{
-    background:rgba(237,250,242,.95) !important;
-    border:1px solid #c9ead5 !important;
-}
-
-/* Responsive */
-@media (max-width: 1100px){
-    .hero{padding:23px 24px 20px !important;}
-    .hero h1{font-size:1.9rem !important;}
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
-        font-size:13px !important;
-        padding-left:32px !important;
-        padding-right:9px !important;
-    }
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
-        font-size:13px !important;
-    }
-    div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
-        left:9px !important;
-        font-size:16px !important;
-    }
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1159,76 +953,205 @@ if 'Correlated Cases' in str(selected_nav):
 
 if 'Root Cause AI' in str(selected_nav):
     st.markdown(
-        "<div class='rca-workspace-head'>"
-        "<div class='rca-workspace-kicker'>AI INVESTIGATION</div>"
-        "<div class='rca-workspace-title'>Root Cause AI</div>"
-        "<div class='rca-workspace-subtitle'>Select a correlated case to inspect the evidence, understand the cause, and generate an explanation.</div>"
-        "</div>",
+        """
+        <div class="rca-page-head">
+            <div class="rca-page-kicker">AI INVESTIGATION</div>
+            <div class="rca-page-title">Root Cause AI</div>
+            <div class="rca-page-subtitle">Understand one correlated case at a time: cause → evidence → impact → action.</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
     if cases.empty:
         st.info("No correlated cases available.")
     else:
-        labels = [f"{r.case_id} · {r.material} · {r.severity} · {r.impact_score}/100" for _, r in cases.iterrows()]
-        idx = st.selectbox("Case", range(len(labels)), format_func=lambda i: labels[i], key="rca_case_select")
+        labels = [
+            f"{r.case_id} · {r.material} · {r.severity} · {r.impact_score}/100"
+            for _, r in cases.iterrows()
+        ]
+
+        st.markdown("**CASE SELECTION**")
+        idx = st.selectbox(
+            "Case",
+            range(len(labels)),
+            format_func=lambda i: labels[i],
+            key="rca_case_select",
+            label_visibility="collapsed",
+        )
+
         case = cases.iloc[idx].to_dict()
         cid = str(case.get("case_id", ""))
-        severity = str(case.get("severity", "Unknown"))
-        sev_class = "critical" if severity.lower() == "critical" else "high" if severity.lower() == "high" else "medium"
+        material = str(case.get("material", ""))
+        severity = str(case.get("severity", "Unknown")).title()
+        impact = int(case.get("impact_score", 0) or 0)
 
-        st.markdown(f"""
-        <div class='rca-header'>
-          <div><div class='rca-kicker'>CASE</div><div class='rca-title'>{cid}</div><div class='rca-material'>{case.get('material','')}</div></div>
-          <div class='rca-meta'><span class='severity-pill {sev_class}'>{severity}</span><span class='impact-pill'>Impact {case.get('impact_score',0)}/100</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+        if severity.lower() == "critical":
+            sev_tone = "critical"
+        elif severity.lower() == "high":
+            sev_tone = "high"
+        else:
+            sev_tone = "medium"
 
-        st.markdown(f"<div class='ai rca-finding'><div class='ai-label'>Root cause</div>{case.get('root_cause','No root-cause explanation available.')}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="rca-case-strip">
+                <div>
+                    <div class="rca-label">SELECTED CASE</div>
+                    <div class="rca-case-id">{cid}</div>
+                    <div class="rca-material">Material · {material}</div>
+                </div>
+                <div class="rca-case-right">
+                    <span class="rca-severity {sev_tone}">{severity}</span>
+                    <span class="rca-impact">Impact <b>{impact}/100</b></span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         signals = case.get("signals", [])
         if isinstance(signals, (list, tuple)):
-            signals = [str(x) for x in signals if str(x).strip()]
+            signals = [str(x).strip() for x in signals if str(x).strip()]
         elif str(signals).strip():
-            signals = [str(signals)]
+            signals = [str(signals).strip()]
         else:
             signals = []
 
-        if signals:
-            st.markdown("**Key evidence**")
-            for signal in signals[:4]:
-                st.markdown(f"• {signal}")
+        left, right = st.columns([1.55, 1], gap="medium")
 
-        st.markdown("**Recommended action**")
-        st.markdown(f"<div class='good compact-action'>{case.get('recommended_action','Review the linked records before corrective action.')}</div>", unsafe_allow_html=True)
+        with left:
+            st.markdown(
+                f"""
+                <div class="rca-panel rca-cause">
+                    <div class="rca-panel-head">
+                        <span class="rca-panel-icon">🧠</span>
+                        <div>
+                            <div class="rca-panel-kicker">EXPLAIN</div>
+                            <div class="rca-panel-title">Root cause</div>
+                        </div>
+                    </div>
+                    <div class="rca-cause-copy">
+                        {case.get("root_cause","No root-cause explanation available.")}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}"):
+            st.markdown(
+                """
+                <div class="rca-panel rca-evidence">
+                    <div class="rca-panel-head">
+                        <span class="rca-panel-icon">🔎</span>
+                        <div>
+                            <div class="rca-panel-kicker">EVIDENCE</div>
+                            <div class="rca-panel-title">Key evidence signals</div>
+                        </div>
+                    </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            if signals:
+                st.markdown(
+                    "".join(
+                        f"<div class='rca-evidence-row'><span class='rca-check'>✓</span><span>{signal}</span></div>"
+                        for signal in signals[:6]
+                    ) + "</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    "<div class='rca-muted'>No evidence signals recorded.</div></div>",
+                    unsafe_allow_html=True,
+                )
+
+        with right:
+            st.markdown(
+                f"""
+                <div class="rca-panel rca-action">
+                    <div class="rca-panel-head">
+                        <span class="rca-panel-icon">✅</span>
+                        <div>
+                            <div class="rca-panel-kicker">DECIDE</div>
+                            <div class="rca-panel-title">Recommended action</div>
+                        </div>
+                    </div>
+                    <div class="rca-action-copy">
+                        {case.get("recommended_action","Review the linked records before corrective action.")}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(
+                f"""
+                <div class="rca-panel rca-impact-panel">
+                    <div class="rca-panel-head">
+                        <span class="rca-panel-icon">📊</span>
+                        <div>
+                            <div class="rca-panel-kicker">IMPACT</div>
+                            <div class="rca-panel-title">Decision context</div>
+                        </div>
+                    </div>
+                    <div class="rca-impact-score">{impact}<span>/100</span></div>
+                    <div class="rca-impact-track">
+                        <div class="rca-impact-fill" style="width:{max(0,min(100,impact))}%"></div>
+                    </div>
+                    <div class="rca-impact-note">Higher score means greater operational attention.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            """
+            <div class="rca-ai-box">
+                <div>
+                    <div class="rca-ai-kicker">GENERATIVE EXPLANATION</div>
+                    <div class="rca-ai-title">Create an AI decision brief</div>
+                    <div class="rca-ai-copy">The model summarizes the evidence into a concise explanation. Workbook evidence remains available as the fallback.</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}", use_container_width=True):
             with st.spinner("AI is synthesizing the case evidence..."):
                 try:
                     st.session_state.ai_cache[cid] = generate_root_cause(case)
                     st.session_state.ai_error = None
-                except Exception as exc:
-                    # Keep the investigation usable even when the external LLM
-                    # endpoint rejects credentials or is temporarily unavailable.
+                except Exception:
                     st.session_state.ai_cache[cid] = (
                         f"**Evidence-grounded explanation:** "
                         f"{case.get('root_cause', 'No root-cause explanation is available for this case.')}"
                     )
                     st.session_state.ai_error = (
-                        "AI explanation could not be generated from the VW LLMaaS endpoint. "
-                        "The app is showing the workbook-backed root-cause explanation instead."
+                        "AI explanation is temporarily unavailable. Showing the workbook-backed explanation instead."
                     )
 
         if st.session_state.get("ai_error"):
-            st.info(st.session_state.ai_error)
+            st.warning(st.session_state.ai_error)
 
         if cid in st.session_state.ai_cache:
-            st.markdown(st.session_state.ai_cache[cid])
+            st.markdown(
+                f"""
+                <div class="rca-ai-output">
+                    <div class="rca-ai-kicker">AI EXPLANATION</div>
+                    <div class="rca-ai-output-copy">{st.session_state.ai_cache[cid]}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         evidence = case.get("evidence", {}) or {}
         nonempty_evidence = [(sheet, records) for sheet, records in evidence.items() if records]
         if nonempty_evidence:
-            with st.expander(f"Supporting records · {sum(len(records) for _, records in nonempty_evidence)} linked rows"):
+            total_rows = sum(len(records) for _, records in nonempty_evidence)
+            with st.expander(f"Supporting records · {total_rows} linked rows"):
                 for sheet, records in nonempty_evidence:
                     st.markdown(f"**{sheet}** · {len(records)} rows")
                     st.dataframe(pd.DataFrame(records), width="stretch", hide_index=True)
