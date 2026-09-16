@@ -12,46 +12,6 @@ from llm import generate_root_cause, copilot_answer, copilot_workbook_answer, en
 
 st.set_page_config(page_title="IntelliWarehouse AI", page_icon="◈", layout="wide")
 
-
-def _safe_root_cause(case):
-    """Keep the UI alive when VW LLMaaS authentication is unavailable."""
-    try:
-        return generate_root_cause(case)
-    except Exception as exc:
-        return (
-            "### AI explanation unavailable\n\n"
-            "The deterministic warehouse analysis is still available above. "
-            "The VW LLMaaS request could not be completed. "
-            f"Authentication/service status: {type(exc).__name__}.\n\n"
-            "Check the VW_IDP_CLIENT_ID, VW_IDP_CLIENT_SECRET, and "
-            "LLM_API_CLIENT_ID values in Streamlit Secrets, then retry."
-        )
-
-
-def _safe_copilot(*args, **kwargs):
-    """Return a user-facing message instead of crashing on LLMaaS errors."""
-    try:
-        return copilot_answer(*args, **kwargs)
-    except Exception as exc:
-        return (
-            "**AI Copilot is temporarily unavailable.**\n\n"
-            "The workbook data remains available in Data Explorer. "
-            f"Service status: `{type(exc).__name__}`. Check the VW LLMaaS "
-            "credentials in Streamlit Secrets and retry."
-        )
-
-
-def _safe_workbook_copilot(*args, **kwargs):
-    try:
-        return copilot_workbook_answer(*args, **kwargs)
-    except Exception as exc:
-        return (
-            "**AI Copilot is temporarily unavailable.**\n\n"
-            f"Service status: `{type(exc).__name__}`. Check the VW LLMaaS "
-            "credentials in Streamlit Secrets and retry."
-        )
-
-
 # Warehouse background image hosted on Vecteezy.
 # Using the public image URL keeps the repository free of image assets.
 BG_URL = "https://static.vecteezy.com/system/resources/previews/030/592/227/large_2x/retail-warehouse-full-of-shelves-with-goods-in-cardboard-boxes-and-packages-logistics-sorting-and-distribution-facility-for-product-delivery-generative-ai-photo.jpeg"
@@ -80,18 +40,18 @@ st.markdown("""
 /* Hero */
 .hero{
     background:linear-gradient(135deg,#081b3a 0%,#12366d 52%,#2459a8 100%);
-    color:white;border-radius:24px;padding:30px 34px;margin-bottom:18px;
+    color:white;border-radius:24px;padding:28px 34px 24px;margin-bottom:12px;
     box-shadow:0 12px 30px rgba(8,27,58,.16)
 }
-.hero h1{font-size:2.35rem;margin:0;font-weight:800;letter-spacing:-.02em}
-.hero p{opacity:.82;margin:.45rem 0 0;font-size:1.02rem}
+.hero h1{font-size:2.15rem;margin:0;font-weight:800;letter-spacing:-.02em}
+.hero p{opacity:.90;margin:.45rem 0 0;font-size:.98rem;font-weight:550}
 
 /* Overview */
 .section-title{font-size:1.45rem;font-weight:800;color:#172033;margin:4px 0 2px}
 .section-subtitle{color:#697386;margin-bottom:16px}
 .overview-card{
-    background:#fff;border:1px solid #e2e8f0;border-radius:18px;
-    padding:18px 18px 16px;min-height:142px;
+    background:rgba(255,255,255,.96);border:1px solid #dce5ef;border-radius:16px;
+    padding:16px 17px 15px;min-height:136px;
     box-shadow:0 5px 18px rgba(15,30,60,.055)
 }
 .overview-card .icon{
@@ -153,51 +113,52 @@ st.markdown("""
 .good{background:#eefaf2;border:1px solid #ccebd7;border-radius:14px;padding:14px}
 .warn{background:#fff8e8;border:1px solid #f2dfae;border-radius:14px;padding:14px}
 
-/* Make Streamlit tabs look like a real product navigation bar */
-div[data-baseweb="tab-list"]{
-    gap:6px;background:#e9eef6;padding:6px;border-radius:15px;
-    border:1px solid #dde4ee
-}
-/* Strong, visible, color-coded tab navigation */
+/* HCI navigation: visibility, recognition, consistency, feedback */
 div[data-baseweb="tab-list"]{
     display:flex !important;
-    gap:7px !important;
-    padding:7px !important;
-    background:rgba(226,235,247,.92) !important;
-    border:1px solid #c8d6e8 !important;
-    border-radius:15px !important;
+    gap:6px !important;
+    padding:6px !important;
+    margin:4px 0 18px !important;
+    background:rgba(246,249,253,.94) !important;
+    border:1px solid #d5dfeb !important;
+    border-radius:14px !important;
+    box-shadow:0 3px 12px rgba(24,55,91,.08) !important;
+    overflow-x:auto !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
     position:relative !important;
-    min-height:48px !important;
-    height:48px !important;
-    padding:7px 14px 7px 40px !important;
+    flex:1 0 auto !important;
+    min-width:118px !important;
+    min-height:46px !important;
+    height:46px !important;
+    padding:6px 13px 6px 38px !important;
     margin:0 !important;
-    border-radius:11px !important;
-    border:1px solid #d0dbea !important;
-    background:rgba(255,255,255,.96) !important;
-    color:#1e3a5f !important;
-    font-size:15px !important;
-    font-weight:750 !important;
-    line-height:1.1 !important;
+    border:1px solid transparent !important;
+    border-radius:10px !important;
+    background:transparent !important;
+    color:#334a67 !important;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    font-size:14px !important;
+    font-weight:700 !important;
+    line-height:1.15 !important;
     white-space:nowrap !important;
-    box-shadow:0 2px 7px rgba(22,52,88,.08) !important;
+    box-shadow:none !important;
+    transition:background .15s ease,box-shadow .15s ease,transform .15s ease !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
 div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
-    color:#1e3a5f !important;
-    font-size:15px !important;
-    font-weight:750 !important;
+    color:inherit !important;
+    font-size:14px !important;
+    font-weight:inherit !important;
     margin:0 !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
     position:absolute !important;
-    left:13px !important;
+    left:12px !important;
     top:50% !important;
     transform:translateY(-50%) !important;
-    font-size:20px !important;
+    font-size:18px !important;
     line-height:1 !important;
-    font-weight:400 !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2)::before{content:"📊";}
@@ -207,7 +168,7 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{con
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
-
+/* Color cue per function */
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
@@ -216,12 +177,21 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5){border-top:
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:3px solid #d58a16 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
-
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
+    background:#ffffff !important;
+    color:#123b72 !important;
+    border-left-color:#c8d6e6 !important;
+    border-right-color:#c8d6e6 !important;
+    border-bottom-color:#c8d6e6 !important;
+    box-shadow:0 3px 9px rgba(20,55,95,.10) !important;
+}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
     background:#ffffff !important;
     color:#0b4f96 !important;
-    border-color:#9fb7d2 !important;
-    box-shadow:0 5px 15px rgba(17,54,94,.16) !important;
+    border-left-color:#b7c9dd !important;
+    border-right-color:#b7c9dd !important;
+    border-bottom-color:#b7c9dd !important;
+    box-shadow:0 4px 12px rgba(20,55,95,.13) !important;
     transform:translateY(-1px) !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
@@ -229,17 +199,8 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
     color:#0b4f96 !important;
     font-weight:850 !important;
 }
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
-    background:#ffffff !important;
-    color:#0b4f96 !important;
-    border-color:#91acd0 !important;
-    box-shadow:0 4px 12px rgba(17,54,94,.13) !important;
-}
+div[data-baseweb="tab-highlight"]{display:none !important;}
 
-button[data-baseweb="tab"]:hover{color:#ffffff !important;background:#f8fafc !important}
-button[data-baseweb="tab"] span{font-size:.95rem}
-button[data-baseweb="tab"] p{display:flex;align-items:center;gap:6px}
-div[data-baseweb="tab-highlight"]{background:#2b63b7 !important;height:3px !important}
 /* Readability on warehouse background */
 .stMarkdown, .stCaption, label, [data-testid="stMetricLabel"]{
     color:#334563 !important;
@@ -279,6 +240,160 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 }
 </style>
 """.replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+/* ===== IntelliWarehouse AI — HCI visual refinement ===== */
+:root{
+    --navy:#12365f;
+    --blue:#1f67b1;
+    --muted:#64748b;
+    --panel:rgba(255,255,255,.93);
+}
+
+/* Warehouse image stays visible but does not overpower information */
+[data-testid="stAppViewContainer"]{
+    background:
+      linear-gradient(rgba(239,245,250,.78),rgba(239,245,250,.78)),
+      url("https://static.vecteezy.com/system/resources/previews/030/592/227/large_2x/retail-warehouse-full-of-shelves-with-goods-in-cardboard-boxes-and-packages-logistics-sorting-and-distribution-facility-for-product-delivery-generative-ai-photo.jpeg")
+      center center / cover fixed no-repeat !important;
+}
+
+/* Sidebar: strong grouping, low cognitive load */
+[data-testid="stSidebar"]{
+    background:rgba(239,245,250,.97) !important;
+    border-right:1px solid #d5e0ec !important;
+}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3{
+    color:var(--navy) !important;
+}
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label{
+    color:#52657d !important;
+}
+
+/* Hero */
+.hero{
+    box-shadow:0 12px 30px rgba(16,52,88,.16) !important;
+}
+.hero h1,
+.hero h2,
+.hero .hero-title{
+    color:#ffffff !important;
+    font-weight:800 !important;
+    letter-spacing:-.8px !important;
+}
+.hero p,
+.hero .hero-subtitle{
+    color:#e8f1fb !important;
+}
+
+/* Navigation strip */
+div[data-baseweb="tab-list"]{
+    gap:6px !important;
+    padding:6px !important;
+    background:rgba(232,240,249,.90) !important;
+    border:1px solid #cbd9e8 !important;
+    border-radius:14px !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
+    min-height:44px !important;
+    height:44px !important;
+    padding:6px 12px 6px 35px !important;
+    margin:0 !important;
+    position:relative !important;
+    border-radius:10px !important;
+    border:1px solid #d4dfeb !important;
+    background:rgba(255,255,255,.94) !important;
+    color:#29425f !important;
+    font-size:14px !important;
+    font-weight:700 !important;
+    white-space:nowrap !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
+div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
+    color:#29425f !important;
+    font-size:14px !important;
+    font-weight:700 !important;
+    margin:0 !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
+    position:absolute !important;
+    left:10px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    font-size:17px !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2)::before{content:"📊";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3)::before{content:"🧠";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4)::before{content:"🔗";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{content:"✅";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
+
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4){border-top:3px solid #0b82c9 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5){border-top:3px solid #18a66b !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:3px solid #d58a16 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
+
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
+    background:#ffffff !important;
+    color:#0b4f96 !important;
+    font-weight:850 !important;
+    border-color:#a9bfd7 !important;
+    box-shadow:0 4px 12px rgba(18,54,95,.14) !important;
+    transform:translateY(-1px) !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
+    color:#0b4f96 !important;
+    font-weight:850 !important;
+}
+
+/* Content hierarchy */
+h1,h2,h3,h4{
+    color:#12365f !important;
+    letter-spacing:-.25px !important;
+}
+.stCaption{
+    color:#64748b !important;
+}
+.card{
+    background:var(--panel) !important;
+    border:1px solid #d9e3ed !important;
+    box-shadow:0 5px 16px rgba(21,54,88,.08) !important;
+}
+
+/* KPI/attention strip */
+[data-testid="stMetric"]{
+    background:rgba(255,255,255,.92) !important;
+    border:1px solid #d9e3ed !important;
+    border-radius:12px !important;
+}
+
+/* Buttons: clear action hierarchy */
+.stButton > button{
+    border-radius:9px !important;
+    font-weight:700 !important;
+    border:1px solid #b9cbe0 !important;
+    color:#12365f !important;
+    background:#ffffff !important;
+}
+.stButton > button:hover{
+    border-color:#4a82ba !important;
+    background:#f4f8fc !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 st.markdown("""
 <style>
@@ -333,6 +448,24 @@ st.markdown("""
 <p>Detect → Correlate → Explain → Impact → Approve</p>
 </div>
 """, unsafe_allow_html=True)
+
+st.markdown("<div class='muted'>Workspace navigation</div>", unsafe_allow_html=True)
+# Compact navigation context
+st.markdown(
+    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
+    unsafe_allow_html=True,
+)
+
+tabs=st.tabs([
+    "Overview",
+    "Operations",
+    "Root Cause AI",
+    "Trace Graph",
+    "Approvals",
+    "Copilot",
+    "Data Explorer",
+    "Audit",
+])
 
 with st.sidebar:
     st.header("Control Center")
@@ -482,8 +615,7 @@ st.markdown(
     """
     <div class="section-title">Operations overview</div>
     <div class="section-subtitle">
-        A quick health view of the warehouse control tower. Use the tabs below
-        when you want to investigate, explain, trace, approve, or explore records.
+        A quick health view of warehouse operations. Use the navigation to investigate, explain, trace, approve, or explore records.
     </div>
     """,
     unsafe_allow_html=True,
@@ -533,22 +665,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Compact navigation context
-st.markdown(
-    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
-    unsafe_allow_html=True,
-)
+# Navigation is rendered directly below the hero for immediate visibility.
 
-tabs=st.tabs([
-    "Overview",
-    "Operations",
-    "Root Cause AI",
-    "Trace Graph",
-    "Approvals",
-    "Copilot",
-    "Data Explorer",
-    "Audit",
-])
 
 with tabs[0]:
     st.subheader("Operations Overview")
@@ -668,7 +786,7 @@ with tabs[1]:
         selected_finding = dq[dq["issue_id"].astype(str).eq(str(dq_choice))].iloc[0]
         finding_case = build_finding_context(selected_finding, data, dq, anomalies)
         with st.spinner("Copilot is checking the exact finding and connected workbook records..."):
-            st.markdown(_safe_copilot(
+            st.markdown(copilot_answer(
                 f"Explain {dq_choice} in detail. Start with the exact finding, then explain the direct evidence, why it matters, related findings, and the safest next step. Do not mix related findings into the exact finding.",
                 finding_case
             ))
@@ -744,7 +862,7 @@ with tabs[2]:
 
         if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}"):
             with st.spinner("AI is synthesizing the case evidence..."):
-                st.session_state.ai_cache[cid] = _safe_root_cause(case)
+                st.session_state.ai_cache[cid] = generate_root_cause(case)
         if cid in st.session_state.ai_cache:
             st.markdown(st.session_state.ai_cache[cid])
 
@@ -915,7 +1033,7 @@ with tabs[5]:
                     "related_findings": rows,
                 }
                 with st.spinner("Copilot is explaining the matching field findings..."):
-                    st.markdown(_safe_copilot(q, synthetic))
+                    st.markdown(copilot_answer(q, synthetic))
         # Exact DQ-/AN- finding IDs and case/material questions are handled
         # only when a field-specific query was not already handled above.
         if not field_handled:
@@ -933,7 +1051,7 @@ with tabs[5]:
             if finding_hit is not None:
                 finding_case = build_finding_context(finding_hit, data, dq, anomalies)
                 with st.spinner("Copilot is checking the exact finding and connected workbook records..."):
-                    st.markdown(_safe_copilot(q, finding_case))
+                    st.markdown(copilot_answer(q, finding_case))
             else:
                 hit = None
                 for _, r in cases.iterrows():
@@ -949,10 +1067,10 @@ with tabs[5]:
                             break
                 if hit:
                     with st.spinner("Analyzing correlated evidence..."):
-                        st.markdown(_safe_copilot(q, hit))
+                        st.markdown(copilot_answer(q, hit))
                 else:
                     with st.spinner("Checking the entire workbook..."):
-                        st.markdown(_safe_workbook_copilot(q, dq, anomalies, data))
+                        st.markdown(copilot_workbook_answer(q, dq, anomalies, data))
 
 with tabs[6]:
     st.subheader("Data Explorer")
