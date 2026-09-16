@@ -285,6 +285,73 @@ h1,h2,h3,h4 {{ color:#153d66 !important; }}
 .rca-ai-copy {{ color:#73859a; font-size:.72rem; margin-top:4px; line-height:1.35; }}
 .ai-output-title {{ margin:10px 0 5px; display:none; }}
 .ai-brief-header {{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding-bottom:13px; margin-bottom:4px; border-bottom:1px solid #e4eaf1; }}
+.ai-decision-brief-surface {{
+    margin:12px 0 18px;
+    padding:22px 24px 24px;
+    background:#ffffff !important;
+    background-color:#ffffff !important;
+    color:#243b55 !important;
+    border:1px solid #cbd8e5;
+    border-radius:18px;
+    box-shadow:0 12px 32px rgba(24,63,103,.14);
+    opacity:1 !important;
+    backdrop-filter:none !important;
+}}
+.ai-decision-brief-surface .ai-brief-header {{
+    background:#ffffff;
+}}
+.ai-decision-brief-surface .ai-section-card {{
+    margin-top:17px;
+    padding:15px 17px 16px;
+    background:#ffffff !important;
+    background-color:#ffffff !important;
+    border:1px solid #e2e9f0;
+    border-radius:13px;
+}}
+.ai-decision-brief-surface .ai-section-card.cause {{ border-left:4px solid #7448c6; }}
+.ai-decision-brief-surface .ai-section-card.factors {{ border-left:4px solid #2f73b7; }}
+.ai-decision-brief-surface .ai-section-card.impact {{ border-left:4px solid #d48b1b; }}
+.ai-decision-brief-surface .ai-section-card.action {{ border-left:4px solid #15986f; }}
+.ai-decision-brief-surface .ai-section-card.confidence {{ border-left:4px solid #62778d; }}
+.ai-decision-brief-surface .ai-section-title {{
+    margin:0 0 8px;
+    color:#173f67 !important;
+    font-size:.92rem;
+    font-weight:900;
+}}
+.ai-decision-brief-surface .ai-section-body {{
+    color:#26384d !important;
+    font-size:.90rem;
+    line-height:1.62;
+}}
+.ai-decision-brief-surface .ai-section-body p,
+.ai-decision-brief-surface .ai-section-body li {{
+    color:#26384d !important;
+}}
+.ai-decision-brief-surface .ai-section-body p {{ margin:.15rem 0 .65rem; }}
+.ai-decision-brief-surface .ai-section-body ul,
+.ai-decision-brief-surface .ai-section-body ol {{ margin:.25rem 0 .3rem 1.2rem; padding-left:1.05rem; }}
+.ai-decision-brief-surface .ai-section-body li {{ margin:.42rem 0; padding-left:.2rem; }}
+.ai-decision-brief-surface strong {{ color:#183f67 !important; }}
+.ai-decision-brief-surface code {{
+    color:#183f67;
+    background:#f2f6fa;
+    padding:1px 5px;
+    border-radius:5px;
+}}
+
+/* RCA AI output surface: keep the live generated content readable over the warehouse background. */
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.ai-brief-header) {{
+    background:rgba(255,255,255,.975) !important;
+    border:1px solid #cfdbe7 !important;
+    border-radius:18px !important;
+    box-shadow:0 10px 28px rgba(18,54,95,.10) !important;
+    backdrop-filter:blur(3px);
+}}
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.ai-brief-header) .ai-section p,
+div[data-testid="stVerticalBlockBorderWrapper"]:has(.ai-brief-header) .ai-section li {{
+    color:#243b55 !important;
+}}
 .ai-brief-kicker {{ color:#7044c5; font-size:.64rem; font-weight:900; letter-spacing:.10em; }}
 .ai-brief-heading {{ color:#173f67; font-size:1.04rem; font-weight:850; margin-top:4px; }}
 .ai-live-pill {{ flex:0 0 auto; color:#197a59; background:#ecf8f2; border:1px solid #cfeade; border-radius:999px; padding:5px 9px; font-size:.64rem; font-weight:900; letter-spacing:.05em; }}
@@ -593,12 +660,9 @@ def clean_ai_text(raw_text: str) -> str:
 
 
 def render_rca_ai_output(raw_text: str) -> None:
-    """Render one consolidated, normalized AI decision brief.
+    """Render the live model response once inside a fully opaque RCA surface."""
+    import html
 
-    The LLM may use slightly different heading names. Normalize them into
-    exactly one occurrence of each business section so the RCA is never
-    duplicated on the page.
-    """
     text = clean_ai_text(raw_text)
     if not text:
         st.info("No AI explanation was returned.")
@@ -634,21 +698,15 @@ def render_rca_ai_output(raw_text: str) -> None:
         if match:
             flush()
             raw_title = re.sub(r"[*_`]+", "", match.group(1)).strip().rstrip(":")
-            current = aliases.get(raw_title.lower())
-            if current is None:
-                current = raw_title.title()
+            current = aliases.get(raw_title.lower()) or raw_title.title()
         elif current:
             buffer.append(line)
-
     flush()
 
-    # Some responses are plain text without markdown headings. Keep the full
-    # model response inside the single decision brief rather than inventing
-    # missing sections.
     if not sections:
         sections = {"AI Explanation": [text]}
 
-    section_order = [
+    order = [
         ("Primary Root Cause", "cause", "🧠"),
         ("Contributing Factors", "factors", "🔎"),
         ("Operational Impact", "impact", "📊"),
@@ -657,46 +715,88 @@ def render_rca_ai_output(raw_text: str) -> None:
         ("AI Explanation", "general", "✨"),
     ]
 
-    with st.container(border=True):
-        st.markdown(
-            "<div class='ai-brief-header'>"
-            "<div><div class='ai-brief-kicker'>LIVE AI-GENERATED DECISION BRIEF</div>"
-            "<div class='ai-brief-heading'>Case explanation generated from linked evidence</div></div>"
-            "<div class='ai-live-pill'>● LIVE</div>"
-            "</div>",
-            unsafe_allow_html=True,
+    def md_inline(value: str) -> str:
+        value = html.escape(value, quote=False)
+        value = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", value)
+        value = re.sub(r"`([^`]+)`", r"<code>\1</code>", value)
+        return value
+
+    def body_html(body: str) -> str:
+        out = []
+        ul = False
+        ol = False
+
+        def close():
+            nonlocal ul, ol
+            if ul:
+                out.append("</ul>")
+                ul = False
+            if ol:
+                out.append("</ol>")
+                ol = False
+
+        for raw in body.splitlines():
+            line = raw.strip()
+            if not line:
+                close()
+                continue
+            mb = re.match(r"^[-*•]\s+(.*)$", line)
+            mo = re.match(r"^\d+[.)]\s+(.*)$", line)
+            if mb:
+                if ol:
+                    close()
+                if not ul:
+                    out.append("<ul>")
+                    ul = True
+                out.append(f"<li>{md_inline(mb.group(1))}</li>")
+            elif mo:
+                if ul:
+                    close()
+                if not ol:
+                    out.append("<ol>")
+                    ol = True
+                out.append(f"<li>{md_inline(mo.group(1))}</li>")
+            else:
+                close()
+                out.append(f"<p>{md_inline(line)}</p>")
+        close()
+        return "".join(out)
+
+    cards = []
+    rendered = set()
+    for title, tone, icon in order:
+        if title not in sections:
+            continue
+        rendered.add(title)
+        body = "\n\n".join(x for x in sections[title] if x).strip()
+        cards.append(
+            f"<section class='ai-section-card {tone}'>"
+            f"<div class='ai-section-title'><span class='ai-section-icon'>{icon}</span>{html.escape(title)}</div>"
+            f"<div class='ai-section-body'>{body_html(body)}</div>"
+            f"</section>"
         )
 
-        rendered = set()
-        for title, tone, icon in section_order:
-            if title not in sections or title in rendered:
-                continue
-            rendered.add(title)
-            body = "\n\n".join(x for x in sections[title] if x).strip()
-            st.markdown(
-                f"<div class='ai-section {tone}'>"
-                f"<div class='ai-section-title'><span class='ai-section-icon'>{icon}</span>{title}</div>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(body)
+    for title, bodies in sections.items():
+        if title in rendered:
+            continue
+        body = "\n\n".join(x for x in bodies if x).strip()
+        cards.append(
+            f"<section class='ai-section-card general'>"
+            f"<div class='ai-section-title'><span class='ai-section-icon'>•</span>{html.escape(title)}</div>"
+            f"<div class='ai-section-body'>{body_html(body)}</div>"
+            f"</section>"
+        )
 
-        # Preserve any additional model section once, without duplicating the
-        # canonical business sections above.
-        for title, bodies in sections.items():
-            if title in rendered:
-                continue
-            body = "\n\n".join(x for x in bodies if x).strip()
-            if not body:
-                continue
-            rendered.add(title)
-            st.markdown(
-                f"<div class='ai-section general'>"
-                f"<div class='ai-section-title'><span class='ai-section-icon'>•</span>{title}</div>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(body)
+    st.markdown(
+        "<div class='ai-decision-brief-surface'>"
+        "<div class='ai-brief-header'>"
+        "<div><div class='ai-brief-kicker'>LIVE AI-GENERATED DECISION BRIEF</div>"
+        "<div class='ai-brief-heading'>Case explanation generated from linked evidence</div></div>"
+        "<div class='ai-live-pill'>● LIVE</div></div>"
+        + "".join(cards)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 # -----------------------------------------------------------------------------
