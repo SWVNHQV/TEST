@@ -222,8 +222,141 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
     letter-spacing:.04em;
 }
 
+/* ===== Operations summary cards ===== */
+.ops-summary-card{
+    position:relative;
+    min-height:116px;
+    padding:15px 17px 14px 19px;
+    border-radius:15px;
+    background:rgba(255,255,255,.96);
+    border:1px solid #d6e1ec;
+    box-shadow:0 6px 17px rgba(19,52,85,.08);
+    overflow:hidden;
+}
+.ops-summary-card::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:5px;
+}
+.ops-summary-card.dq::before{background:#d84b45;}
+.ops-summary-card.process::before{background:#dc941f;}
+.ops-summary-card.rca::before{background:#7448c6;}
+.ops-summary-card.approval::before{background:#2b73ba;}
+
+.ops-summary-top{
+    display:flex;
+    align-items:center;
+    gap:9px;
+}
+.ops-summary-step{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:27px;
+    height:27px;
+    border-radius:8px;
+    background:#edf3f9;
+    color:#67809a;
+    font-size:.68rem;
+    font-weight:850;
+}
+.ops-summary-card.dq .ops-summary-step{background:#fdeceb;color:#bd3e39;}
+.ops-summary-card.process .ops-summary-step{background:#fff2dd;color:#b9780d;}
+.ops-summary-card.rca .ops-summary-step{background:#f0eaff;color:#6740b4;}
+.ops-summary-card.approval .ops-summary-step{background:#e8f2fb;color:#2465a2;}
+
+.ops-summary-title{
+    color:#3d536d;
+    font-size:.82rem;
+    font-weight:800;
+}
+.ops-summary-value{
+    color:#153b64;
+    font-size:2.15rem;
+    font-weight:850;
+    line-height:1;
+    letter-spacing:-.8px;
+    margin-top:12px;
+}
+.ops-summary-subtitle{
+    color:#7a899b;
+    font-size:.73rem;
+    margin-top:7px;
+}
+
+/* ===== Findings workspace ===== */
+.findings-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:end;
+    margin:14px 0 8px;
+}
+.findings-kicker{
+    color:#7b4bc4;
+    font-size:.68rem;
+    font-weight:850;
+    letter-spacing:.10em;
+}
+.findings-title{
+    color:#163f6a;
+    font-size:1.28rem;
+    font-weight:850;
+    margin-top:2px;
+}
+.findings-subtitle{
+    color:#71829a;
+    font-size:.82rem;
+    margin-top:3px;
+}
+.finding-severity{
+    position:relative;
+    min-height:82px;
+    padding:13px 15px;
+    border-radius:13px;
+    background:rgba(255,255,255,.96);
+    border:1px solid #d9e3ed;
+    box-shadow:0 4px 12px rgba(22,54,88,.06);
+    overflow:hidden;
+}
+.finding-severity::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0; width:4px;
+}
+.finding-severity.critical::before{background:#d64545;}
+.finding-severity.high::before{background:#e39a20;}
+.finding-severity.medium::before{background:#4679be;}
+.finding-severity.low::before{background:#6e7f92;}
+.finding-severity-label{
+    color:#6d7d92;
+    font-size:.76rem;
+    font-weight:750;
+}
+.finding-severity-value{
+    color:#173b63;
+    font-size:1.65rem;
+    font-weight:850;
+    line-height:1.05;
+    margin-top:6px;
+}
 
 
+/* Sidebar operation sub-navigation */
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(2),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(3),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(4){
+    margin-left:8px !important;
+    padding-left:14px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(5),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(6),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(7),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(8),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(9),
+section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(10){
+    margin-top:1px !important;
+}
 
 /* ===== Root Cause AI final HCI treatment ===== */
 .rca-page-head{margin:8px 0 12px}
@@ -292,6 +425,123 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
 }
 .rca-ai-output-copy{margin-top:5px}
 
+
+/* Typography / page hierarchy */
+h1,h2,h3,h4{
+    color:var(--navy) !important;
+    font-weight:800 !important;
+}
+h2{font-size:1.55rem !important;}
+h3{font-size:1.16rem !important;}
+.stCaption, .muted{color:var(--muted) !important;}
+.section-subtitle{color:#6b7c92 !important;}
+.section-title{color:var(--navy) !important;font-size:1.45rem !important;font-weight:820 !important;}
+
+/* Surface components */
+.card,.overview-card,.health-card{
+    background:var(--panel) !important;
+    border:1px solid var(--line) !important;
+    box-shadow:0 6px 18px rgba(20,52,88,.07) !important;
+}
+.overview-card{
+    border-radius:16px !important;
+    padding:15px 16px 14px !important;
+    min-height:134px !important;
+}
+.overview-card .label{
+    color:#61738a !important;
+    font-size:.87rem !important;
+    font-weight:700 !important;
+}
+.overview-card .value{
+    color:#172c46 !important;
+    font-size:1.9rem !important;
+    font-weight:850 !important;
+}
+.overview-card .desc{
+    color:#738399 !important;
+    font-size:.78rem !important;
+}
+.priority-strip{
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid var(--line) !important;
+    border-radius:13px !important;
+    box-shadow:0 3px 12px rgba(20,52,88,.06) !important;
+}
+.overview-note{
+    background:rgba(235,243,252,.94) !important;
+    border:1px solid #d1e0ef !important;
+    color:#506783 !important;
+    border-radius:13px !important;
+}
+
+/* Inputs, buttons and expanders */
+.stButton > button{
+    border-radius:9px !important;
+    font-weight:750 !important;
+    color:#123b66 !important;
+    background:#fff !important;
+    border:1px solid #b9cbdd !important;
+}
+.stButton > button[kind="primary"]{
+    color:#fff !important;
+    background:#1769b0 !important;
+    border-color:#1769b0 !important;
+}
+.stButton > button:hover{
+    border-color:#2d72af !important;
+    box-shadow:0 3px 9px rgba(20,52,88,.10) !important;
+}
+div[data-testid="stExpander"]{
+    background:rgba(255,255,255,.84) !important;
+    border:1px solid #cedbe8 !important;
+    border-radius:12px !important;
+}
+
+/* Data tables */
+div[data-testid="stDataFrame"]{
+    border:1px solid #d3dfeb !important;
+    border-radius:12px !important;
+    overflow:hidden !important;
+    background:rgba(255,255,255,.95) !important;
+}
+div[data-testid="stDataFrame"] *{
+    font-size:13px !important;
+}
+
+/* RCA */
+.rca-header{
+    background:rgba(255,255,255,.96) !important;
+    border:1px solid #d8e2ed !important;
+    box-shadow:0 6px 18px rgba(20,52,88,.07) !important;
+}
+.ai{
+    background:rgba(246,242,255,.95) !important;
+    border:1px solid #ddd2f7 !important;
+}
+.good{
+    background:rgba(237,250,242,.95) !important;
+    border:1px solid #c9ead5 !important;
+}
+
+/* Responsive */
+@media (max-width: 1100px){
+    .hero{padding:23px 24px 20px !important;}
+    .hero h1{font-size:1.9rem !important;}
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
+        font-size:13px !important;
+        padding-left:32px !important;
+        padding-right:9px !important;
+    }
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
+        font-size:13px !important;
+    }
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
+        left:9px !important;
+        font-size:16px !important;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -317,6 +567,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+st.markdown(
+    "<div class='page-kicker'>WORKSPACE</div>"
+    "<div class='page-hint'>Choose a workspace from the sidebar to investigate, explain, trace, approve, or inspect records.</div>",
+    unsafe_allow_html=True,
+)
 
 with st.sidebar:
     st.markdown(
@@ -345,7 +600,6 @@ with st.sidebar:
         "Workspace",
         nav_options,
         index=0,
-        key="workspace_navigation",
         label_visibility="collapsed",
     )
 
@@ -364,12 +618,6 @@ with st.sidebar:
 
     st.markdown("<div class='sidebar-section-title'>GOVERNANCE</div>", unsafe_allow_html=True)
     st.caption("Human approval required · Simulated actions · Audit retained")
-
-
-st.markdown(
-    f"<div class='page-kicker'>WORKSPACE / {str(selected_nav).replace('🏠','').replace('🔎','').replace('⚙️','').replace('🧠','').replace('🧩','').replace('🔗','').replace('✅','').replace('💬','').replace('🗄️','').replace('🧾','').strip()}</div>",
-    unsafe_allow_html=True,
-)
 
 try:
     raw=load_workbook(path)
@@ -501,7 +749,7 @@ def build_finding_context(finding, data, dq, anomalies):
 # Navigation is rendered directly below the hero for immediate visibility.
 
 
-if 'Overview' in str(selected_nav):
+if selected_nav == '🏠  Overview':
     st.markdown("<div class='section-title'>Operations overview</div>", unsafe_allow_html=True)
     st.markdown(
         "<div class='section-subtitle'>Start with the warehouse health picture, then move into the investigation workflow.</div>",
@@ -620,7 +868,7 @@ if 'Overview' in str(selected_nav):
         "Use Data Explorer when you need the underlying workbook records."
     )
 
-if 'Data Quality' in str(selected_nav):
+if selected_nav == '🔎  Data Quality':
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker'>FINDINGS</div>"
@@ -740,7 +988,7 @@ if 'Data Quality' in str(selected_nav):
             ))
 
 
-if 'Inventory & Process' in str(selected_nav):
+if selected_nav == '⚙️  Inventory & Process':
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker process-kicker'>OPERATIONS</div>"
@@ -844,7 +1092,7 @@ if 'Inventory & Process' in str(selected_nav):
             use_container_width=False,
         )
 
-if 'Correlated Cases' in str(selected_nav):
+if selected_nav == '🧠  Correlated Cases':
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker rca-kicker'>OPERATIONS</div>"
@@ -1156,7 +1404,7 @@ if 'Root Cause AI' in str(selected_nav):
                     st.markdown(f"**{sheet}** · {len(records)} rows")
                     st.dataframe(pd.DataFrame(records), width="stretch", hide_index=True)
 
-if 'Trace Graph' in str(selected_nav):
+if selected_nav == '🔗  Trace Graph':
     st.subheader("Relationship trace")
     st.caption("Follow one material across the six operational sheets. Relationships are built from workbook keys.")
     if cases.empty:
@@ -1196,7 +1444,7 @@ if 'Trace Graph' in str(selected_nav):
             with st.expander(f"{title} · {len(df)} linked rows"):
                 st.dataframe(df[cols],width="stretch",hide_index=True)
 
-if 'Approvals' in str(selected_nav):
+if selected_nav == '✅  Approvals':
     st.subheader("Human approval gate")
     st.caption("The Action Agent proposes. A human decides. The app only simulates execution.")
     if cases.empty: st.info("No actions.")
@@ -1232,7 +1480,7 @@ if 'Approvals' in str(selected_nav):
                 st.rerun()
             st.write(f"**Current status:** {state['status']}")
 
-if 'Copilot' in str(selected_nav):
+if selected_nav == '💬  Copilot':
     st.subheader("Warehouse Copilot")
     st.caption("Ask about any finding, material, delivery, PO, vendor, or workbook-wide issue.")
     q=st.text_input(
@@ -1354,25 +1602,15 @@ if 'Copilot' in str(selected_nav):
                     with st.spinner("Checking the entire workbook..."):
                         st.markdown(copilot_workbook_answer(q, dq, anomalies, data))
 
-if 'Data Explorer' in str(selected_nav):
+if selected_nav == '🗄️  Data Explorer':
     st.subheader("Data Explorer")
     visible_sheets=[s for s in data.keys() if s not in {"README","Data_Dictionary"}]
     sheet=st.selectbox("Sheet",visible_sheets)
     st.dataframe(data[sheet],width="stretch",hide_index=True)
 
-if 'Audit' in str(selected_nav):
+if selected_nav == '🧾  Audit':
     st.subheader("Audit trail")
     if st.session_state.audit:
         st.dataframe(pd.DataFrame(st.session_state.audit),width="stretch",hide_index=True)
     else:
         st.info("No human decisions recorded in this session.")
-
-
-# Defensive fallback: never leave the main canvas empty if a future nav label
-# is changed without updating the router.
-known_pages = [
-    "Overview", "Data Quality", "Inventory & Process", "Correlated Cases",
-    "Root Cause AI", "Trace Graph", "Approvals", "Copilot", "Data Explorer", "Audit"
-]
-if not any(p in str(selected_nav) for p in known_pages):
-    st.info("Select a workspace from the sidebar to continue.")
