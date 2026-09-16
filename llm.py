@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-import os
 import json
+import os
 import re
 from pathlib import Path
+from typing import Any
+
+import httpx
 import streamlit as st
 
+
+# ---------------------------------------------------------------------------
+# Secrets / VW Group LLMaaS
+# ---------------------------------------------------------------------------
 
 def _secret(name: str, default=None):
     """Read Streamlit Cloud Secrets first, then local environment variables."""
@@ -18,52 +25,34 @@ def _secret(name: str, default=None):
     return os.getenv(name, default)
 
 
-SYSTEM_PROMPT = """
-You are the Root-Cause Analyst and Warehouse Copilot for a warehouse AI control tower.
-
-You receive structured evidence generated from an Excel/SAP-style warehouse dataset.
-
-Rules:
-1. Use ONLY the supplied evidence.
-2. Never invent quantities, IDs, dates, vendors, relationships, or business events.
-3. Explicitly connect evidence across systems only when the supplied workbook evidence supports the relationship.
-4. Distinguish observed facts from inference.
-5. When explaining a finding, explain the exact finding first, then direct evidence, then related/correlated risks.
-6. Keep exact workbook values, IDs, dates, quantities, and field names.
-7. Treat the connected workbook records as the primary source of truth. Pre-computed metrics and root-cause text are supporting summaries, not substitutes for the records.
-8. Separate: (a) confirmed facts directly observed in records, (b) deterministic calculations, (c) inferred root cause, and (d) contributing factors/symptoms.
-9. Do not call a calculated negative "available stock" a physical stock quantity. If blocked quantity exceeds on-hand, describe the inconsistency and usable available stock separately.
-10. Recommendations are proposals only. Never claim an action was executed.
-11. If evidence is insufficient, say so.
-12. Be concise but useful for an operations user.
-"""
+VW_TOKEN_URL = "https://idp.cloud.vwgroup.com/auth/realms/kums-mfa/protocol/openid-connect/token"
 
 
-def enabled():
-    """Return True when all VW Group LLMaaS credentials are configured."""
+def enabled() -> bool:
+    """Return True when the verified VW Group LLMaaS credentials are available."""
     return all(
-        bool(_secret(name))
-        for name in ("VW_IDP_CLIENT_ID", "VW_IDP_CLIENT_SECRET", "LLM_API_CLIENT_ID")
+        _secret(name)
+        for name in (
+            "VW_IDP_CLIENT_ID",
+            "VW_IDP_CLIENT_SECRET",
+            "LLM_API_CLIENT_ID",
+        )
     )
 
 
 def get_token() -> str:
-    """Get a temporary VW Group IDP access token using client credentials."""
-    import httpx
-
+    """Get the temporary VW Group IDP access token."""
     client_id = _secret("VW_IDP_CLIENT_ID")
     client_secret = _secret("VW_IDP_CLIENT_SECRET")
+
     if not client_id or not client_secret:
         raise RuntimeError(
-            "Missing VW_IDP_CLIENT_ID or VW_IDP_CLIENT_SECRET in Streamlit Secrets."
+            "VW Group IDP credentials are missing. Configure "
+            "VW_IDP_CLIENT_ID and VW_IDP_CLIENT_SECRET in Streamlit Secrets."
         )
 
-    url = _secret(
-        "VW_IDP_TOKEN_URL",
-        "https://idp.cloud.vwgroup.com/auth/realms/kums-mfa/protocol/openid-connect/token",
-    )
     response = httpx.post(
-        url,
+        VW_TOKEN_URL,
         data={
             "client_id": client_id,
             "client_secret": client_secret,
@@ -72,16 +61,18 @@ def get_token() -> str:
         timeout=30.0,
     )
     response.raise_for_status()
-    payload = response.json()
-    token = payload.get("access_token")
+    token = response.json().get("access_token")
     if not token:
-        raise RuntimeError("VW Group IDP token response did not contain access_token.")
+        raise RuntimeError("VW Group IDP did not return an access token.")
     return token
 
 
 def _client():
-    """Create the verified VW Group LLMaaS OpenAI-compatible client."""
+    """Create the OpenAI-compatible VW Group LLMaaS client."""
     from openai import OpenAI
+
+    if not enabled():
+        raise RuntimeError("VW Group LLMaaS credentials are not configured.")
 
     token = get_token()
     key = _secret("LLM_API_CLIENT_ID")
@@ -94,53 +85,346 @@ def _client():
     )
 
 
-def _chat(client, model: str, system_prompt: str, user_prompt: str) -> str:
-    """Call the VW Group LLMaaS endpoint using the chat-completions interface."""
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        stream=False,
-        temperature=0.0,
-    )
-    content = response.choices[0].message.content if response.choices else None
-    if not content:
-        raise RuntimeError("VW Group LLMaaS returned an empty response.")
-    return content.strip()
-
-
-def generate_root_cause(case: dict, model: str | None = None) -> str:
-    # RCA must be genuinely AI-generated. Never silently display the deterministic
-    # case text when the VW Group LLMaaS connection is unavailable.
-    if not enabled():
-        raise RuntimeError(
-            "VW Group LLMaaS is not configured. Add VW_IDP_CLIENT_ID, "
-            "VW_IDP_CLIENT_SECRET, and LLM_API_CLIENT_ID to Streamlit Secrets."
-        )
-
+def _chat(prompt: str, model: str | None = None, temperature: float = 0.0) -> str:
+    """Call the verified VW Group chat-completions endpoint."""
     model = model or _secret("OPENAI_MODEL", "gpt-4o")
     client = _client()
 
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        stream=False,
+        temperature=temperature,
+    )
+    return (response.choices[0].message.content or "").strip()
+
+
+# ---------------------------------------------------------------------------
+# Shared system prompt
+# ---------------------------------------------------------------------------
+
+SYSTEM_PROMPT = """
+You are the Root-Cause Analyst and Warehouse Copilot for IntelliWarehouse AI.
+
+You work only from the supplied Excel/SAP-style warehouse evidence.
+
+Core rules:
+1. Use ONLY supplied evidence.
+2. Never invent quantities, IDs, dates, vendors, statuses, relationships, or events.
+3. Preserve exact workbook values, IDs, field names, dates, and units.
+4. For counts, totals, averages, comparisons, rankings, and date logic, calculate from
+   the supplied workbook records.
+5. Treat the connected workbook records as the source of truth.
+6. Distinguish confirmed facts, deterministic calculations, and inference.
+7. Never treat a calculated quantity as a physical fact unless the workbook supports it.
+8. Recommendations are proposals only; never claim an action was executed.
+9. If the evidence is insufficient, say exactly what is missing.
+10. Answer the operator's actual question directly. Do not answer a different question.
+11. Never import unrelated DQ/anomaly findings into a general question.
+12. Keep answers concise, operational, and evidence-grounded.
+"""
+
+
+# ---------------------------------------------------------------------------
+# Workbook loading
+# ---------------------------------------------------------------------------
+
+def _load_copilot_workbook():
+    """Load the complete operational six-sheet workbook."""
+    import pandas as pd
+
+    candidates = [
+        Path(__file__).with_name("Warehouse_AI_Hackathon_Synthetic_Dataset_FINAL 2.xlsx"),
+        Path(__file__).with_name("Warehouse_AI_Hackathon_Synthetic_Dataset_FINAL_2.xlsx"),
+    ]
+
+    workbook = next((p for p in candidates if p.exists()), None)
+    if workbook is None:
+        return {}
+
+    try:
+        sheets = pd.read_excel(workbook, sheet_name=None)
+    except Exception:
+        return {}
+
+    wanted = {
+        "Material_Master",
+        "Inventory_Stock",
+        "Warehouse_Bin",
+        "Deliveries_Dispatch",
+        "Purchase_Replenish",
+        "Vendor_Master",
+    }
+    return {k: v for k, v in sheets.items() if k in wanted}
+
+
+# ---------------------------------------------------------------------------
+# Generic helpers
+# ---------------------------------------------------------------------------
+
+def _norm(value) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
+
+
+def _display(value):
+    if value is None:
+        return "blank"
+    try:
+        import pandas as pd
+
+        if pd.isna(value):
+            return "blank"
+    except Exception:
+        pass
+    return str(value)
+
+
+def _finding_evidence(row):
+    ev = row.get("evidence", {}) if isinstance(row, dict) else {}
+    return ev if isinstance(ev, dict) else {}
+
+
+def _extract_ids(question):
+    return set(
+        re.findall(
+            r"\b[A-Z]{2,10}-\d{3,10}[A-Z]?\b",
+            str(question).upper(),
+        )
+    )
+
+
+def _rows_for_entity(data, entity):
+    """Return rows connected to material/vendor/delivery/PO IDs."""
+    result = {}
+    if not entity:
+        return result
+
+    entities = {x.strip().upper() for x in str(entity).split("|") if x.strip()}
+    for sheet, df in data.items():
+        if df is None or df.empty:
+            continue
+
+        masks = []
+
+        for col in ("Material", "Assigned Material", "Vendor", "Delivery", "Purchase Order"):
+            if col in df.columns:
+                masks.append(
+                    df[col].astype(str).str.strip().str.upper().isin(entities)
+                )
+
+        if not masks:
+            continue
+
+        mask = masks[0]
+        for extra in masks[1:]:
+            mask = mask | extra
+
+        matched = df.loc[mask]
+        if not matched.empty:
+            result[sheet] = matched.to_dict("records")
+
+    return result
+
+
+def _format_records(records, max_rows=12):
+    lines = []
+    for sheet, rows in records.items():
+        lines.append(f"### {sheet} ({len(rows)} linked rows)")
+        for row in rows[:max_rows]:
+            compact = " · ".join(
+                f"{k}={_display(v)}" for k, v in row.items()
+            )
+            lines.append(f"- {compact}")
+        if len(rows) > max_rows:
+            lines.append(f"- ... {len(rows) - max_rows} more rows")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _specific_finding(question, dq, anomalies=None):
+    """Resolve an exact DQ-/AN- ID without using unrelated findings."""
+    ids = _extract_ids(question)
+    dq = dq if dq is not None else []
+    anomalies = anomalies if anomalies is not None else []
+
+    for rows in (dq.to_dict("records") if hasattr(dq, "to_dict") else dq,
+                 anomalies.to_dict("records") if hasattr(anomalies, "to_dict") else anomalies):
+        for row in rows:
+            issue_id = str(row.get("issue_id", "")).upper()
+            if issue_id and issue_id in ids:
+                return row
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Deterministic general-question engine
+# ---------------------------------------------------------------------------
+
+def _deterministic_general_answer(question: str, data: dict) -> str | None:
+    """
+    Safely answer common quantitative/status questions directly from the workbook.
+    Return None when the question needs general LLM interpretation.
+    """
+    import pandas as pd
+
+    q = str(question).strip()
+    qn = _norm(q)
+    if not q or not data:
+        return None
+
+    inventory = data.get("Inventory_Stock")
+    deliveries = data.get("Deliveries_Dispatch")
+    pos = data.get("Purchase_Replenish")
+    materials = data.get("Material_Master")
+    vendors = data.get("Vendor_Master")
+    bins = data.get("Warehouse_Bin")
+
+    # Entity counts.
+    if any(k in qn for k in ("howmanymaterials", "numberofmaterials", "countofmaterials")):
+        return f"### Answer\nThere are **{len(materials) if materials is not None else 0} material master records** in the workbook."
+
+    if any(k in qn for k in ("howmanyvendors", "numberofvendors", "countofvendors")):
+        return f"### Answer\nThere are **{len(vendors) if vendors is not None else 0} vendor master records** in the workbook."
+
+    if any(k in qn for k in ("howmanydeliveries", "numberofdeliveries", "countofdeliveries")):
+        return f"### Answer\nThere are **{len(deliveries) if deliveries is not None else 0} delivery records** in the workbook."
+
+    if any(k in qn for k in ("howmanypurchaseorders", "howmanypos", "numberofpurchaseorders", "countofpurchaseorders")):
+        return f"### Answer\nThere are **{len(pos) if pos is not None else 0} purchase-order records** in the workbook."
+
+    # "Still in delivery" / open operational deliveries.
+    asks_in_delivery = (
+        ("delivery" in qn or "deliveries" in qn)
+        and any(term in qn for term in ("still", "pending", "open", "progress", "outstanding", "remaining"))
+        and any(term in qn for term in ("item", "items", "unit", "units", "quantity", "qty", "howmany", "howmuch", "count"))
+    )
+    if asks_in_delivery and deliveries is not None and not deliveries.empty and {"Status", "Order Qty"}.issubset(deliveries.columns):
+        status = deliveries["Status"].astype(str).str.strip().str.upper()
+        qty = pd.to_numeric(deliveries["Order Qty"], errors="coerce").fillna(0)
+        completed = {"DELIVERED", "GI-DONE"}
+        active = deliveries.loc[~status.isin(completed)].copy()
+
+        status_summary = (
+            active.assign(_qty=qty.loc[active.index])
+            .groupby(status.loc[active.index])
+            .agg(records=("Status", "size"), units=("_qty", "sum"))
+            .reset_index()
+            .rename(columns={"Status": "Status"})
+        )
+
+        lines = [
+            "### Answer",
+            f"There are **{len(active)} in-progress delivery records** totaling **{int(active['Order Qty'].map(pd.to_numeric, errors='coerce').fillna(0).sum()):,} units**.",
+            "",
+            "### Active delivery status",
+        ]
+        for _, r in status_summary.iterrows():
+            lines.append(f"- **{r['Status']}**: {int(r['records'])} records / {int(r['units']):,} units")
+        lines.append("")
+        lines.append("Completed statuses excluded: DELIVERED, GI-DONE.")
+        return "\n".join(lines)
+
+    # Overdue deliveries relative to fixed project snapshot.
+    if "overdue" in qn and "deliver" in qn and deliveries is not None and not deliveries.empty:
+        if {"Planned GI Date", "Status"}.issubset(deliveries.columns):
+            snapshot = pd.Timestamp("2026-09-05")
+            planned = pd.to_datetime(deliveries["Planned GI Date"], errors="coerce")
+            status = deliveries["Status"].astype(str).str.upper()
+            active = ~status.isin({"DELIVERED", "GI-DONE"})
+            overdue = deliveries.loc[active & planned.notna() & (planned < snapshot)]
+            total_qty = 0
+            if "Order Qty" in overdue.columns:
+                total_qty = int(pd.to_numeric(overdue["Order Qty"], errors="coerce").fillna(0).sum())
+            return (
+                "### Answer\n"
+                f"There are **{len(overdue)} overdue active delivery records**, totaling **{total_qty:,} units** "
+                f"as of the **2026-09-05 snapshot**."
+            )
+
+    # Expired inventory.
+    if "expired" in qn and ("inventory" in qn or "stock" in qn) and inventory is not None:
+        if {"Batch Expiry", "Qty On Hand"}.issubset(inventory.columns):
+            snapshot = pd.Timestamp("2026-09-05")
+            expiry = pd.to_datetime(inventory["Batch Expiry"], errors="coerce")
+            qty = pd.to_numeric(inventory["Qty On Hand"], errors="coerce").fillna(0)
+            expired = inventory.loc[(expiry < snapshot) & (qty > 0)].copy()
+            total = int(pd.to_numeric(expired["Qty On Hand"], errors="coerce").fillna(0).sum())
+            lines = [
+                "### Answer",
+                f"There are **{len(expired)} expired inventory records**, totaling **{total:,} units** as of the **2026-09-05 snapshot**.",
+                "",
+                "### Expired inventory",
+            ]
+            cols = [c for c in ("Material", "Plant", "Qty On Hand", "Batch Expiry") if c in expired.columns]
+            for _, row in expired.sort_values("Batch Expiry").iterrows():
+                lines.append(
+                    "- " + " · ".join(f"**{c}**={_display(row[c])}" for c in cols)
+                )
+            return "\n".join(lines)
+
+    # Negative stock.
+    if ("negative" in qn or "negativestock" in qn) and ("stock" in qn or "inventory" in qn) and inventory is not None:
+        if "Qty On Hand" in inventory.columns:
+            qty = pd.to_numeric(inventory["Qty On Hand"], errors="coerce")
+            rows = inventory.loc[qty < 0].copy()
+            total = int(abs(qty.loc[rows.index].fillna(0).sum()))
+            return (
+                "### Answer\n"
+                f"There are **{len(rows)} inventory records with negative Qty On Hand**, "
+                f"with **{total:,} units of negative on-hand quantity in absolute terms**."
+            )
+
+    # Blocked vendors.
+    if "vendor" in qn and "block" in qn and vendors is not None and "Procurement Block" in vendors.columns:
+        block = vendors["Procurement Block"].astype(str).str.strip().str.upper().eq("Y")
+        rows = vendors.loc[block]
+        if "Vendor" in rows.columns and "Vendor Name" in rows.columns:
+            items = [f"**{r['Vendor']}** ({r['Vendor Name']})" for _, r in rows.iterrows()]
+            return "### Answer\nThe procurement-blocked vendors are:\n" + "\n".join(f"- {x}" for x in items)
+
+    # Over-capacity bins.
+    if ("overcapacity" in qn or ("over" in qn and "capacity" in qn)) and bins is not None:
+        if {"Capacity", "Occupied"}.issubset(bins.columns):
+            cap = pd.to_numeric(bins["Capacity"], errors="coerce")
+            occ = pd.to_numeric(bins["Occupied"], errors="coerce")
+            rows = bins.loc[occ > cap].copy()
+            excess = (occ.loc[rows.index] - cap.loc[rows.index]).sum()
+            return (
+                "### Answer\n"
+                f"There are **{len(rows)} over-capacity warehouse bins**, with "
+                f"**{int(excess):,} units of total excess occupancy**."
+            )
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Root Cause / exact finding explanation
+# ---------------------------------------------------------------------------
+
+def generate_root_cause(case: dict, model: str | None = None) -> str:
+    """Generate one AI-only RCA brief from the selected correlated case."""
+    if not enabled():
+        raise RuntimeError(
+            "VW Group LLMaaS is not configured. RCA generation requires the live LLM."
+        )
+
     prompt = f"""
-Analyze this correlated warehouse case as a senior warehouse root-cause analyst.
+Analyze exactly ONE correlated warehouse case.
 
-The JSON contains both deterministic calculations and the underlying connected workbook records.
-The six source sheets in `evidence` are the source of truth: Material_Master, Inventory_Stock,
-Warehouse_Bin, Deliveries_Dispatch, Purchase_Replenish, and Vendor_Master.
-
+CASE EVIDENCE:
 {json.dumps(case, indent=2, default=str)}
 
-Reasoning requirements:
-1. Read the connected records across all available sheets before forming the root cause.
-2. Reconcile the material, plant, vendor, delivery, PO and inventory relationships using only supplied keys.
-3. Use deterministic metrics for arithmetic, but verify the meaning against the underlying records.
-4. Do not simply repeat `root_cause`; independently explain why the evidence supports that conclusion.
-5. Identify the primary root cause first, then contributing factors, then symptoms.
-6. Never invent a record. If a sheet has zero linked records, say that it has no linked evidence.
-7. Preserve exact IDs, quantities, dates, statuses, field names and values.
-8. For inventory, distinguish physical on-hand, blocked quantity, usable available quantity, inbound quantity and shortage.
+Use the linked workbook records in the case as the source of truth.
 
 Write exactly these sections:
 ### Root Cause
@@ -149,1043 +433,207 @@ Write exactly these sections:
 ### Recommended Action
 ### Confidence
 
-In Evidence Chain, explicitly name the source sheet and the exact record/field values supporting each important conclusion.
+Requirements:
+- Explain the primary causal mechanism first.
+- Use exact values and IDs from the supplied evidence.
+- Explicitly name the source sheet and record/field values in Evidence Chain.
+- Distinguish confirmed facts from inference.
+- Do not repeat unrelated findings.
+- Do not invent any record or relationship.
+- Keep the response concise and manager-ready.
 """
-    return _chat(client, model, SYSTEM_PROMPT, prompt)
+    return _chat(prompt, model=model)
 
 
-def _load_copilot_workbook():
-    """Load the complete six-sheet workbook so Copilot is never limited to a correlated case."""
-    import pandas as pd
-
-    candidates = [
-        Path(__file__).with_name("Warehouse_AI_Hackathon_Synthetic_Dataset_FINAL 2.xlsx"),
-        Path(__file__).with_name("Warehouse_AI_Hackathon_Synthetic_Dataset_FINAL_2.xlsx"),
-    ]
-    workbook = next((p for p in candidates if p.exists()), None)
-    if workbook is None:
-        return {}
-
-    try:
-        sheets = pd.read_excel(workbook, sheet_name=None)
-        wanted = {
-            "Material_Master", "Inventory_Stock", "Warehouse_Bin",
-            "Deliveries_Dispatch", "Purchase_Replenish", "Vendor_Master"
-        }
-        return {k: v for k, v in sheets.items() if k in wanted}
-    except Exception:
-        return {}
-
-
-def _is_general_copilot_question(question: str) -> bool:
-    """Return True unless the operator explicitly asks for RCA/explanation of a finding/case."""
-    qn = _norm(question)
-    rca_terms = [
-        "rootcause", "root cause", "whyisthisfinding", "explainthisfinding",
-        "explainfinding", "explainanomaly", "explaincase", "explainthiscase",
-        "whyisthisanomaly", "whyisthiscase", "whyflagged", "whywasthisflagged",
-    ]
-    return not any(term.replace(" ", "") in qn for term in rca_terms)
-
-
-def explain_finding(finding_context: dict, model: str | None = None) -> str:
-    """Explain exactly one finding from its connected evidence.
-
-    This path is intentionally narrower than general Copilot: it sends only the
-    selected finding plus its connected records/related findings to the LLM.
-    That prevents the model from accidentally mixing another DQ/anomaly row into
-    the explanation when the workbook contains many similar issues.
-    """
+def explain_finding(context: dict, model: str | None = None) -> str:
+    """Explain exactly one selected DQ/anomaly finding and nothing else."""
     if not enabled():
-        # Keep this explicit rather than silently pretending an AI explanation exists.
         raise RuntimeError(
-            "VW Group LLMaaS is not configured. Add VW_IDP_CLIENT_ID, "
-            "VW_IDP_CLIENT_SECRET, and LLM_API_CLIENT_ID to Streamlit Secrets."
+            "VW Group LLMaaS is not configured. Finding explanation requires the live LLM."
         )
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4o")
-    client = _client()
+    selected = context.get("selected_finding", context.get("finding", context))
+    exact_id = selected.get("issue_id", "") if isinstance(selected, dict) else ""
 
-    issue_id = str(finding_context.get("issue_id", "")).strip()
-    exact_evidence = finding_context.get("exact_finding_evidence", {})
-    connected = finding_context.get("connected_workbook_records", {})
-    related = []
-
-    prompt = f"""
-Explain ONE specific warehouse finding for an operations user.
-
-SELECTED FINDING — THIS IS THE ONLY FINDING BEING EXPLAINED
-Issue ID: {issue_id}
-Finding type: {finding_context.get('finding_type')}
-Severity: {finding_context.get('severity')}
-Record: {finding_context.get('entity')}
-Issue title: {finding_context.get('title')}
-Finding detail: {finding_context.get('detail')}
-
-EXACT FINDING EVIDENCE:
-{json.dumps(exact_evidence, indent=2, default=str)}
-
-CONNECTED WORKBOOK RECORDS FOR THIS FINDING:
-{json.dumps(connected, indent=2, default=str)}
-
-STRICT RULES:
-1. Explain ONLY {issue_id}. Do not substitute, merge, or rename the selected finding.
-2. Use only the evidence supplied above.
-3. Preserve exact IDs, quantities, dates, statuses, material, plant, and field names.
-4. Never invent transactions, causes, records, customers, vendors, or business events.
-5. Distinguish confirmed facts from inference.
-6. Do not infer that one connected workbook row is the cause of another unless the supplied evidence supports that relationship.
-7. The ONLY issue ID that may appear in the answer is the selected issue ID: {issue_id}.
-8. Do not output any DQ/AN issue list or unrelated finding table.
-9. Do not mention other anomaly IDs, other DQ IDs, or unrelated records.
-10. Recommendations are proposals only; never claim that an action was executed.
-
-Return exactly these sections:
-### Finding
-State what {issue_id} means in plain operational language.
-
-### Exact Evidence
-Name the source sheet(s) and quote the exact workbook values that establish the finding.
-
-### Why It Matters
-Explain the operational risk. Clearly label inference where appropriate.
-
-### Related Risks
-Only risks that follow from the selected finding. Do not list unrelated DQ/anomaly records here.
-
-### Safest Next Step
-Give practical verification/remediation steps based only on the evidence.
-
-### Summary
-One concise sentence about {issue_id}.
-"""
-
-    answer = _chat(client, model, SYSTEM_PROMPT, prompt)
-
-    # Defensive output guard: an exact-finding explanation must never leak
-    # another DQ/AN issue ID or an unrelated markdown finding table.
-    allowed_id = issue_id.upper()
-    lines = answer.splitlines()
-    cleaned = []
-    for line in lines:
-        ids = re.findall(r"\b(?:DQ|AN)-\d+\b", line.upper())
-        if ids and any(x != allowed_id for x in ids):
-            # Drop unrelated issue-ID lines/tables from the model response.
-            continue
-        cleaned.append(line)
-    answer = "\n".join(cleaned).strip()
-
-    # Remove a trailing markdown finding table if one was nevertheless produced.
-    answer = re.sub(
-        r"(?ms)\n\|\s*(?:DQ|AN)-\d+.*$",
-        "",
-        answer,
-        flags=re.I,
-    ).strip()
-    return answer
-
-
-def copilot_answer(question: str, case: dict | None = None, model: str | None = None) -> str:
-    """General-purpose Copilot entry point.
-
-    IMPORTANT: this function intentionally loads the complete workbook.  The
-    `case` argument is optional supporting context for an explicit RCA/finding
-    question; it is NOT the primary evidence source for normal Copilot queries.
-    This keeps questions like "how many expired inventory?" workbook-wide even
-    when the UI happens to pass a selected finding/case.
-    """
-    workbook = _load_copilot_workbook()
-    case = case or {}
-
-    if not enabled():
-        # Delegate to the workbook-aware deterministic engine whenever possible.
-        try:
-            import pandas as pd
-            dq = pd.DataFrame(case.get("related_data_quality_findings", []))
-            anomalies = pd.DataFrame(case.get("related_anomaly_findings", []))
-            if workbook:
-                return copilot_workbook_answer(question, dq, anomalies, workbook, model)
-        except Exception:
-            pass
-        return fallback_copilot(question, case)
-
-    model = model or _secret("OPENAI_MODEL", "gpt-4o")
-    client = _client()
-
-    workbook_records = {
-        sheet: df.to_dict("records")
-        for sheet, df in workbook.items()
+    # Only exact selected finding + connected workbook records.
+    payload = {
+        "selected_finding": selected,
+        "connected_workbook_records": context.get(
+            "connected_workbook_records",
+            context.get("direct_workbook_records", {}),
+        ),
     }
 
-    explicit_rca = not _is_general_copilot_question(question)
-    context = {
-        "operator_question": question,
-        "snapshot_date": "2026-09-05",
-        "complete_workbook": workbook_records,
-    }
-
-    if explicit_rca and case:
-        context["selected_case_or_finding_supporting_context"] = case
-
     prompt = f"""
-You are the general-purpose Warehouse Control Tower Copilot.
+Explain ONE warehouse data-quality/inventory-process finding.
 
-Operator question:
-{question}
+Selected finding ID: {exact_id}
 
 Evidence:
-{json.dumps(context, indent=2, default=str)}
+{json.dumps(payload, indent=2, default=str)}
 
-PRIMARY RULE:
-Answer the operator's actual question using the COMPLETE SIX-SHEET WORKBOOK
-above. Never assume that the currently selected finding, anomaly, material, or
-correlated case defines the scope of the question.
+STRICT SCOPE:
+- Explain ONLY the selected finding {exact_id}.
+- Do not mention other DQ- or AN- IDs.
+- Do not produce a list/table of other findings.
+- Use only the selected finding and its connected workbook records.
+- Do not infer causality beyond what the evidence supports.
+- Preserve exact quantities, dates, IDs, fields, material, plant and status values.
 
-For normal/general questions, the workbook is the primary and authoritative
-scope. The selected case/finding is only supporting context and must NOT narrow
-the answer.
-
-For an explicit RCA/finding/case explanation, you may use the selected case as
-supporting context, but verify it against the complete workbook records.
-
-You can answer questions about:
-- Material_Master
-- Inventory_Stock
-- Warehouse_Bin
-- Deliveries_Dispatch
-- Purchase_Replenish
-- Vendor_Master
-
-Rules:
-1. For counts, totals, averages, comparisons, rankings and date logic, calculate
-   from the supplied workbook records.
-2. For lists, show actual IDs/materials/vendors and exact workbook values.
-3. Understand natural-language synonyms and case-insensitive field names.
-4. If the question is workbook-wide, inspect ALL relevant rows.
-5. If the question names a material/vendor/PO/delivery, find it in the workbook
-   and connect related records across sheets using actual keys.
-6. Do not use correlated-case evidence as a substitute for the workbook.
-7. Never invent quantities, IDs, dates, statuses, relationships or events.
-8. Preserve exact workbook values.
-9. Distinguish confirmed facts, deterministic calculations and inference.
-10. If a requested value is unavailable, say so rather than substituting a
-    selected case's value.
-11. Start with a direct answer. Use a compact table/list when useful.
-
-Example:
-If the operator asks "How many expired inventory?", calculate expiration across
-ALL Inventory_Stock rows using Batch Expiry relative to the 2026-09-05 snapshot.
-Do not answer from a selected material such as MAT-100056.
+Write exactly:
+### Finding
+### Exact Evidence
+### Why It Matters
+### Related Operational Risk
+### Safest Next Step
+### Summary
 """
+    answer = _chat(prompt, model=model)
 
-    return _chat(client, model, SYSTEM_PROMPT, prompt)
-
-
-# -------------------------------------------------------------------
-# Generic helpers for workbook-aware Copilot
-# -------------------------------------------------------------------
-
-def _norm(value) -> str:
-    """Case-insensitive, punctuation-insensitive matching."""
-    if value is None:
-        return ""
-    return re.sub(r"[^a-z0-9]+", "", str(value).strip().lower())
-
-
-def _display(value):
-    if value is None:
-        return "blank"
-    try:
-        import pandas as pd
-        if pd.isna(value):
-            return "blank"
-    except Exception:
-        pass
-    return str(value)
-
-
-def _find_column(df, user_text):
-    """Find a dataframe column regardless of capitalization/spaces/punctuation."""
-    if df is None or getattr(df, "empty", False) and len(getattr(df, "columns", [])) == 0:
-        return None
-
-    target = _norm(user_text)
-
-    for col in df.columns:
-        if _norm(col) == target:
-            return col
-
-    # Partial matching for phrases such as 'base uom field'.
-    for col in df.columns:
-        ncol = _norm(col)
-        if target and (target in ncol or ncol in target):
-            return col
-
-    return None
-
-
-def _question_column_candidates(question, data):
-    """
-    Return actual workbook columns that appear relevant to the user's question.
-    Matching is case-insensitive.
-    """
-    qn = _norm(question)
-    matches = []
-
-    for sheet, df in data.items():
-        if df is None or not hasattr(df, "columns"):
-            continue
-
-        for col in df.columns:
-            cn = _norm(col)
-            if not cn:
-                continue
-
-            if cn in qn or cn.replace(" ", "") in qn:
-                matches.append((sheet, col))
-
-    # Common operator synonyms.
-    synonyms = {
-        "uom": ["Base UoM", "UoM"],
-        "unit": ["Base UoM", "UoM", "Unit Price"],
-        "group": ["Material Group"],
-        "materialgroup": ["Material Group"],
-        "type": ["Material Type"],
-        "materialtype": ["Material Type"],
-        "supplier": ["Vendor", "Vendor Name"],
-        "vendor": ["Vendor", "Vendor Name"],
-        "po": ["Purchase Order", "PO Status", "PO Qty"],
-        "purchaseorder": ["Purchase Order"],
-        "delivery": ["Delivery", "Order Qty", "Planned GI Date", "Status"],
-        "route": ["Route"],
-        "plant": ["Plant"],
-        "country": ["Country"],
-        "safetystock": ["Safety Stock"],
-        "reorderpoint": ["Reorder Point"],
-        "rop": ["Reorder Point"],
-        "hazmat": ["Hazmat Flag"],
-        "lifecycle": ["Lifecycle Status"],
-    }
-
-    for key, possible_cols in synonyms.items():
-        if key in qn:
-            for sheet, df in data.items():
-                if df is None or not hasattr(df, "columns"):
-                    continue
-                for col in possible_cols:
-                    actual = _find_column(df, col)
-                    if actual is not None:
-                        pair = (sheet, actual)
-                        if pair not in matches:
-                            matches.append(pair)
-
-    return matches
-
-
-def _extract_ids(question):
-    return set(
-        re.findall(
-            r"\b[A-Z]{2,10}-\d{3,10}[A-Z]?\b",
-            str(question).upper()
-        )
-    )
-
-
-def _finding_evidence(row):
-    ev = row.get("evidence", {})
-    return ev if isinstance(ev, dict) else {}
-
-
-def _finding_text(row):
-    parts = [
-        f"ID={row.get('issue_id', '')}",
-        f"Severity={row.get('severity', '')}",
-        f"Record={row.get('entity', '')}",
-        f"Issue={row.get('title', '')}",
-        f"Explanation={row.get('detail', '')}",
-    ]
-
-    ev = _finding_evidence(row)
-    if ev:
-        parts.append(
-            "Actual values: " +
-            " · ".join(
-                f"{k}={_display(v)}"
-                for k, v in ev.items()
+    # Defensive cleanup: prevent accidental unrelated issue IDs from leaking.
+    if exact_id:
+        ids = set(re.findall(r"\b(?:DQ|AN)-\d+\b", answer.upper()))
+        allowed = exact_id.upper()
+        for issue_id in sorted(ids - {allowed}):
+            answer = re.sub(
+                rf"(?im)^.*\b{re.escape(issue_id)}\b.*(?:\n|$)",
+                "",
+                answer,
             )
-        )
-
-    return "\n".join(parts)
+    return re.sub(r"\n{3,}", "\n\n", answer).strip()
 
 
-def _rows_for_entity(data, entity):
-    """Get connected workbook records for one or more material/vendor/delivery/PO IDs."""
-    result = {}
-    if not entity:
-        return result
-
-    entities = [x.strip() for x in str(entity).split("|") if x.strip()]
-    for sheet, df in data.items():
-        if df is None or not hasattr(df, "columns") or df.empty:
-            continue
-
-        masks = []
-        if "Material" in df.columns:
-            col = df["Material"].astype(str).str.strip().str.upper()
-            wanted = {x.upper() for x in entities}
-            masks.append(col.isin(wanted))
-        if "Assigned Material" in df.columns:
-            col = df["Assigned Material"].astype(str).str.strip().str.upper()
-            wanted = {x.upper() for x in entities}
-            masks.append(col.isin(wanted))
-        if "Vendor" in df.columns:
-            col = df["Vendor"].astype(str).str.strip().str.upper()
-            wanted = {x.upper() for x in entities}
-            masks.append(col.isin(wanted))
-        if "Delivery" in df.columns:
-            col = df["Delivery"].astype(str).str.strip().str.upper()
-            wanted = {x.upper() for x in entities}
-            masks.append(col.isin(wanted))
-        if "Purchase Order" in df.columns:
-            col = df["Purchase Order"].astype(str).str.strip().str.upper()
-            wanted = {x.upper() for x in entities}
-            masks.append(col.isin(wanted))
-
-        if masks:
-            mask = masks[0]
-            for m in masks[1:]:
-                mask = mask | m
-            matched = df[mask]
-            if not matched.empty:
-                result[sheet] = matched.to_dict("records")
-
-    return result
-
-
-def _field_missing_findings(question, dq, data=None):
-    """
-    Find DQ findings related to a field, case-insensitively.
-    Handles Base UoM, base uom, BASE UOM, etc.
-    """
-    if dq is None or dq.empty:
-        return []
-
-    qn = _norm(question)
-    matches = []
-
-    # Exact/semantic field aliases.
-    aliases = {
-        "baseuom": ["baseuom", "uom", "unitofmeasure"],
-        "uom": ["baseuom", "uom", "unitofmeasure"],
-        "materialgroup": ["materialgroup", "group"],
-        "group": ["materialgroup"],
-        "materialtype": ["materialtype", "type"],
-        "type": ["materialtype"],
-        "safetystock": ["safetystock"],
-        "reorderpoint": ["reorderpoint", "rop"],
-        "rop": ["reorderpoint", "rop"],
-        "country": ["country", "vendorcountry"],
-        "plant": ["plant"],
-        "hazmat": ["hazmat", "hazmatflag"],
-        "lifecycle": ["lifecycle", "lifecyclestatus"],
-        "route": ["route"],
-        "unitprice": ["unitprice"],
-    }
-
-    wanted = set()
-
-    for key, vals in aliases.items():
-        if key in qn:
-            wanted.update(vals)
-
-    # Future-proof behavior: if the workbook gains a new column that is not
-    # in the alias dictionary, match the actual column name from the workbook.
-    # Example: a future column named "Storage Zone" will work automatically.
-    if data:
-        for sheet, col in _question_column_candidates(question, data):
-            wanted.add(_norm(col))
-
-    for _, row in dq.iterrows():
-        hay = _norm(
-            " ".join(
-                [
-                    str(row.get("title", "")),
-                    str(row.get("detail", "")),
-                    json.dumps(row.get("evidence", {}), default=str),
-                ]
-            )
-        )
-
-        if wanted and any(w in hay for w in wanted):
-            matches.append(row.to_dict())
-
-    return matches
-
-
-def _specific_finding(question, dq):
-    """Find an exact DQ/AN ID from the user's question."""
-    ids = _extract_ids(question)
-
-    if not ids:
-        return None
-
-    # Search DQ first because DQ-xxxx should resolve to the DQ finding.
-    if dq is not None and not dq.empty:
-        for _, row in dq.iterrows():
-            if str(row.get("issue_id", "")).upper() in ids:
-                return row.to_dict()
-
-    return None
-
-
-def _format_workbook_records(records, max_rows=10):
-    lines = []
-
-    for sheet, rows in records.items():
-        lines.append(f"### {sheet} ({len(rows)} linked rows)")
-
-        for row in rows[:max_rows]:
-            compact = " · ".join(
-                f"{k}={_display(v)}"
-                for k, v in row.items()
-            )
-            lines.append(f"- {compact}")
-
-        if len(rows) > max_rows:
-            lines.append(f"- ... {len(rows) - max_rows} more rows")
-
-        lines.append("")
-
-    return "\n".join(lines)
-
-
-# -------------------------------------------------------------------
-# Workbook Copilot
-# -------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# General Copilot
+# ---------------------------------------------------------------------------
 
 def copilot_workbook_answer(question: str, dq, anomalies, data, model: str | None = None) -> str:
     """
-    Workbook-aware Copilot.
+    General Copilot.
 
-    Supports:
-    - exact DQ IDs such as DQ-0102
-    - case-insensitive field questions such as Base UoM/base uom/BASE UOM
-    - material/vendor/delivery/PO questions
-    - broad workbook questions
+    Every general question follows the same path:
+    1. Safely answer common numeric/status questions directly from the workbook.
+    2. Otherwise send the operator question + the COMPLETE six-sheet workbook to the
+       VW Group LLMaaS model.
+    Exact DQ/AN explanations are handled separately by explain_finding().
     """
-
     import pandas as pd
 
-    dq = dq.copy() if dq is not None else pd.DataFrame()
-    anomalies = anomalies.copy() if anomalies is not None else pd.DataFrame()
+    q = str(question or "").strip()
+    if not q:
+        return "### Answer\nPlease enter a question."
+
     data = data or {}
+    dq = dq.copy() if hasattr(dq, "copy") else pd.DataFrame()
+    anomalies = anomalies.copy() if hasattr(anomalies, "copy") else pd.DataFrame()
 
-    q = str(question).strip()
-    qn = _norm(q)
-
-    # ---------------------------------------------------------------
-    # 1. Exact Data Quality finding: "Explain DQ-0102"
-    # ---------------------------------------------------------------
-    finding = _specific_finding(q, dq)
-
-    if finding is not None:
-        entity = str(finding.get("entity", ""))
-
-        direct_records = _rows_for_entity(data, entity)
-
-        # Related DQ findings for the same entity.
-        related_dq = []
-        if not dq.empty:
-            for _, row in dq.iterrows():
-                if (
-                    str(row.get("issue_id", "")) != str(finding.get("issue_id", ""))
-                    and entity
-                    and entity in str(row.get("entity", ""))
-                ):
-                    related_dq.append(row.to_dict())
-
-        # Related anomaly findings for the same entity.
-        related_an = []
-        if not anomalies.empty:
-            for _, row in anomalies.iterrows():
-                if entity and entity in str(row.get("entity", "")):
-                    related_an.append(row.to_dict())
-
-        context = {
-            "question": q,
-            "exact_finding": finding,
-            "direct_workbook_records": direct_records,
-            "related_data_quality_findings": related_dq,
-            "related_anomaly_findings": related_an,
-        }
-
-        if not enabled():
-            lines = [
-                f"### {finding.get('issue_id')} — Detailed Explanation",
-                "",
-                f"**Severity:** {finding.get('severity')}",
-                f"**Record:** {finding.get('entity')}",
-                f"**Issue:** {finding.get('title')}",
-                "",
-                "### What the finding means",
-                str(finding.get("detail", "")),
-                "",
-                "### Exact evidence",
-            ]
-
-            ev = _finding_evidence(finding)
-            for k, v in ev.items():
-                lines.append(f"- **{k}:** {_display(v)}")
-
-            if direct_records:
-                lines.extend(["", "### Direct workbook records"])
-                lines.append(_format_workbook_records(direct_records, max_rows=5))
-
-            if related_dq or related_an:
-                lines.extend(["", "### Related findings"])
-                for r in related_dq[:10]:
-                    lines.append(
-                        f"- {r.get('issue_id')} · {r.get('severity')} · "
-                        f"{r.get('title')}"
-                    )
-                for r in related_an[:10]:
-                    lines.append(
-                        f"- {r.get('issue_id')} · {r.get('severity')} · "
-                        f"{r.get('title')}"
-                    )
-
-            lines.extend(
-                [
-                    "",
-                    "### Recommended next step",
-                    "Review the direct workbook records above and resolve the exact data-quality condition before taking corrective action.",
-                ]
+    # Never route ordinary general questions into field/finding explanation logic.
+    # Only exact DQ/AN IDs are treated as explicit finding questions.
+    explicit_id = _extract_ids(q)
+    if explicit_id and any(x.startswith(("DQ-", "AN-")) for x in explicit_id):
+        finding = _specific_finding(q, dq, anomalies)
+        if finding is not None:
+            return explain_finding(
+                {
+                    "selected_finding": finding,
+                    "connected_workbook_records": _rows_for_entity(
+                        data, finding.get("entity", "")
+                    ),
+                },
+                model=model,
             )
 
-            return "\n".join(lines)
+    # Deterministic arithmetic/status layer for common exact questions.
+    deterministic = _deterministic_general_answer(q, data)
+    if deterministic:
+        return deterministic
 
-        model = model or _secret("OPENAI_MODEL", "gpt-4o")
-        client = _client()
-
-        prompt = f"""
-Operator question:
-{q}
-
-The operator is asking about ONE SPECIFIC DATA QUALITY FINDING.
-
-Evidence:
-{json.dumps(context, indent=2, default=str)}
-
-Answer with exactly these sections:
-
-### What the finding means
-Explain the exact DQ finding in plain operational language.
-
-### Exact evidence
-Use the exact values from the finding and workbook records.
-
-### Why it matters
-Explain the operational/business risk. Clearly distinguish confirmed facts from inference.
-
-### Related findings
-Only include related findings that are actually supplied. Do not mix them into the root cause of the exact DQ finding.
-
-### Recommended next step
-Give a practical review/remediation proposal. Do not claim execution.
-
-Do not invent any information.
-"""
-        return _chat(client, model, SYSTEM_PROMPT, prompt)
-
-    # ---------------------------------------------------------------
-    # 2. Field-level question: "Base UoM", "base uom", "BASE UOM"
-    # ---------------------------------------------------------------
-    field_findings = _field_missing_findings(q, dq, data)
-
-    if field_findings:
-        context = {
-            "question": q,
-            "matched_field_findings": field_findings,
-            "relevant_columns": _question_column_candidates(q, data),
-        }
-
-        if not enabled():
-            lines = [
-                "### Data Quality Field Investigation",
-                "",
-                f"**Question:** {q}",
-                "",
-                f"I found **{len(field_findings)}** data-quality finding(s) related to this field/topic.",
-                "",
-                "### Findings",
-            ]
-
-            for row in field_findings[:50]:
-                lines.append(f"- **{row.get('issue_id')}** · {row.get('severity')} · {row.get('entity')} · {row.get('title')}")
-                lines.append(f"  {row.get('detail')}")
-                ev = _finding_evidence(row)
-                if ev:
-                    lines.append(
-                        "  Actual: " +
-                        " · ".join(
-                            f"{k}={_display(v)}"
-                            for k, v in ev.items()
-                        )
-                    )
-
-            return "\n".join(lines)
-
-        model = model or _secret("OPENAI_MODEL", "gpt-4o")
-        client = _client()
-
-        prompt = f"""
-Operator question:
-{q}
-
-The operator is asking about a workbook field/topic.
-
-Evidence:
-{json.dumps(context, indent=2, default=str)}
-
-Explain the field/topic using ONLY the evidence.
-
-Treat field names case-insensitively and ignore spaces, punctuation and capitalization.
-For example Base UoM, base uom and BASE UOM are the same field.
-If the field exists in the workbook but is not in the built-in synonym list, use the actual workbook column name as the authority.
-
-Show:
-### Answer
-### Actual findings
-### What the field means operationally
-### Recommended next step
-
-Keep exact issue IDs, records and actual values.
-Do not invent missing records.
-"""
-        return _chat(client, model, SYSTEM_PROMPT, prompt)
-
-    # ---------------------------------------------------------------
-    # 3. Material/entity investigation
-    # ---------------------------------------------------------------
-    ids = _extract_ids(q)
-
-    material_id = None
-    for identifier in ids:
-        if identifier.startswith("MAT-"):
-            material_id = identifier
-            break
-
-    if material_id:
-        records = _rows_for_entity(data, material_id)
-
-        related_dq = []
-        related_an = []
-
-        if not dq.empty:
-            related_dq = [
-                r.to_dict()
-                for _, r in dq.iterrows()
-                if material_id in str(r.get("entity", ""))
-            ]
-
-        if not anomalies.empty:
-            related_an = [
-                r.to_dict()
-                for _, r in anomalies.iterrows()
-                if material_id in str(r.get("entity", ""))
-            ]
-
-        context = {
-            "question": q,
-            "material": material_id,
-            "workbook_records": records,
-            "data_quality_findings": related_dq,
-            "anomaly_findings": related_an,
-        }
-
-        if not enabled():
-            lines = [
-                f"### {material_id}",
-                "",
-                "### Connected workbook records",
-                _format_workbook_records(records, max_rows=10)
-                if records
-                else "No connected workbook records found.",
-                "",
-                "### Data Quality findings",
-            ]
-
-            if related_dq:
-                for r in related_dq:
-                    lines.append(
-                        f"- {r.get('issue_id')} · {r.get('severity')} · "
-                        f"{r.get('title')} · {r.get('detail')}"
-                    )
-            else:
-                lines.append("- No related Data Quality findings.")
-
-            lines.extend(["", "### Anomaly findings"])
-
-            if related_an:
-                for r in related_an:
-                    lines.append(
-                        f"- {r.get('issue_id')} · {r.get('severity')} · "
-                        f"{r.get('title')} · {r.get('detail')}"
-                    )
-            else:
-                lines.append("- No related anomaly findings.")
-
-            return "\n".join(lines)
-
-        model = model or _secret("OPENAI_MODEL", "gpt-4o")
-        client = _client()
-
-        prompt = f"""
-Operator question:
-{q}
-
-Material investigation:
-{json.dumps(context, indent=2, default=str)}
-
-Answer the operator using only the workbook evidence.
-
-If they ask "what is this material?", provide a concise profile and connected operational records.
-If they ask "what is the issue?", summarize all supplied DQ and anomaly findings.
-If they ask "why is it short?", connect inventory, delivery demand and inbound evidence.
-If they ask what to do, provide a recommendation based on the evidence.
-
-Use exact values and IDs.
-Do not invent information.
-"""
-        return _chat(client, model, SYSTEM_PROMPT, prompt)
-
-    # ---------------------------------------------------------------
-    # 4. Broad workbook question
-    # ---------------------------------------------------------------
-
-    dq_counts = {}
-    if not dq.empty and "title" in dq.columns:
-        dq_counts = dq["title"].value_counts().to_dict()
-
-    an_counts = {}
-    if not anomalies.empty and "title" in anomalies.columns:
-        an_counts = anomalies["title"].value_counts().to_dict()
-
-    missing_rows = []
-
-    if not dq.empty and "title" in dq.columns:
-        mask = dq["title"].astype(str).str.contains(
-            "missing|orphan",
-            case=False,
-            regex=True,
-            na=False
-        )
-        missing_rows = dq.loc[mask].to_dict("records")
-
-    # ---------------------------------------------------------------
-    # Deterministic workbook-wide inventory questions
-    # ---------------------------------------------------------------
-    # Counts/quantities must come from the workbook, not from an LLM
-    # interpretation.  This prevents a broad question such as
-    # "How many expired inventory?" from being answered using the
-    # currently selected material/finding only.
-    asks_expired = (
-        "expired" in qn
-        and any(term in qn for term in [
-            "inventory", "stock", "quantity", "qty", "units",
-            "howmany", "howmuch", "total", "list", "which"
-        ])
-    )
-
-    if asks_expired and "expiry" not in qn:
-        inv = data.get("Inventory_Stock")
-        if inv is not None and not inv.empty and {"Material", "Plant", "Qty On Hand", "Batch Expiry"}.issubset(inv.columns):
-            snapshot = pd.Timestamp("2026-09-05")
-            expiry = pd.to_datetime(inv["Batch Expiry"], errors="coerce")
-            qty = pd.to_numeric(inv["Qty On Hand"], errors="coerce").fillna(0)
-            mask = expiry < snapshot
-            # Match the anomaly rule: only expired stock with positive on-hand quantity.
-            expired = inv.loc[mask & (qty > 0), ["Material", "Plant", "Qty On Hand", "Batch Expiry"]].copy()
-            expired["Qty On Hand"] = pd.to_numeric(expired["Qty On Hand"], errors="coerce").fillna(0)
-            expired = expired.sort_values("Batch Expiry")
-            total_qty = int(expired["Qty On Hand"].sum())
-
-            lines = [
-                "### Answer",
-                f"There are **{len(expired)} expired inventory records**, totaling **{total_qty:,} units** as of the **2026-09-05 snapshot**.",
-                "",
-                "### Expired inventory",
-            ]
-            for _, r in expired.iterrows():
-                exp = pd.Timestamp(r["Batch Expiry"]).strftime("%Y-%m-%d")
-                lines.append(
-                    f"- **{r['Material']}** · Plant **{r['Plant']}** · **{int(r['Qty On Hand']):,} units** · expired **{exp}**"
-                )
-            lines.extend([
-                "",
-                "### Important",
-                "This is a workbook-wide Copilot answer. It is not limited to the material or finding currently selected elsewhere in the app.",
-            ])
-            return "\n".join(lines)
-
-    asks_missing = any(
-        term in qn
-        for term in [
-            "missingdata",
-            "missingfield",
-            "missingfields",
-            "blankdata",
-            "incompletedata",
-            "datamissing",
-            "missinginformation",
-        ]
-    )
-
-    if asks_missing:
-        lines = [
-            "### Answer",
-            f"The Data Quality Agent found **{len(missing_rows)}** missing/orphan findings under the current validation rules.",
-            "",
-            "### Findings",
-        ]
-
-        for title, count in dq_counts.items():
-            if "missing" in str(title).lower() or "orphan" in str(title).lower():
-                lines.append(f"- **{title}: {count}**")
-
-        lines.extend(["", "### Affected records"])
-
-        for r in missing_rows[:50]:
-            lines.append(
-                f"- **{r.get('issue_id')}** · **{r.get('entity')}** · "
-                f"{r.get('title')}"
-            )
-
-        return "\n".join(lines)
-
-    # For a genuinely general Copilot question, provide the LLM with the
-    # complete loaded workbook, not only the current selection or finding
-    # summaries.  This lets Copilot answer questions such as:
-    # - How many materials/vendors/deliveries/POs are there?
-    # - Which vendors are blocked?
-    # - What is the total stock?
-    # - Which deliveries are overdue?
-    # - Show records matching a material/plant/status/value.
-    # - What are the biggest operational risks?
-    # The deterministic agents still establish DQ/anomaly facts; the LLM
-    # explains and answers the operator's natural-language question.
-    full_workbook = {}
-    for sheet_name, df in data.items():
-        if df is None:
-            continue
-        full_workbook[sheet_name] = df.to_dict("records")
-
-    context = {
-        "question": q,
-        "snapshot_date": "2026-09-05",
-        "data_row_counts": {
-            k: len(v) for k, v in data.items()
-        },
-        "data_quality_findings": dq.to_dict("records") if not dq.empty else [],
-        "anomaly_summary": an_counts,
-        "data_quality_summary": dq_counts,
-        "full_workbook_records": full_workbook,
+    # For EVERY OTHER question, use the complete workbook.
+    full_workbook = {
+        sheet_name: df.to_dict("records")
+        for sheet_name, df in data.items()
+        if df is not None
     }
 
     if not enabled():
-        # Give a useful deterministic answer for common general questions
-        # even when the OpenAI key is unavailable.  More complex natural
-        # language questions still need the LLM.
-        inventory = data.get("Inventory_Stock")
-        deliveries = data.get("Deliveries_Dispatch")
-        pos = data.get("Purchase_Replenish")
-        materials = data.get("Material_Master")
-        vendors = data.get("Vendor_Master")
-
-        if any(term in qn for term in ["how many materials", "number of materials", "count of materials"]):
-            return f"### Answer\nThere are **{len(materials) if materials is not None else 0} material master records** in the workbook."
-        if any(term in qn for term in ["how many vendors", "number of vendors", "count of vendors"]):
-            return f"### Answer\nThere are **{len(vendors) if vendors is not None else 0} vendor master records** in the workbook."
-        if any(term in qn for term in ["how many deliveries", "number of deliveries", "count of deliveries"]):
-            return f"### Answer\nThere are **{len(deliveries) if deliveries is not None else 0} delivery records** in the workbook."
-        if any(term in qn for term in ["how many purchase orders", "how many pos", "number of purchase orders", "count of purchase orders"]):
-            return f"### Answer\nThere are **{len(pos) if pos is not None else 0} purchase-order records** in the workbook."
-
+        # No LLM: return a transparent evidence-only response rather than a
+        # misleading selected-finding answer.
         return (
             "### Answer\n"
-            f"I checked the loaded workbook. The Data Quality Agent found **{len(dq)}** findings and the Anomaly Agent found **{len(anomalies)}** findings.\n\n"
-            "For general natural-language questions, Copilot uses the complete six-sheet workbook as its evidence source. "
-            "The OpenAI connection is currently unavailable, so I cannot generate the full natural-language answer for this question yet."
+            "The complete workbook is loaded, but the VW Group LLMaaS connection "
+            "is not available for this natural-language question. "
+            "Configure the VW Group LLMaaS Secrets to enable general Copilot answers."
         )
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4o")
-    client = _client()
+    context = {
+        "operator_question": q,
+        "snapshot_date": "2026-09-05",
+        "complete_workbook": full_workbook,
+    }
 
     prompt = f"""
-Operator question:
+You are answering a general warehouse control-tower Copilot question.
+
+OPERATOR QUESTION:
 {q}
 
-Complete workbook and control-tower evidence:
+COMPLETE WORKBOOK EVIDENCE:
 {json.dumps(context, indent=2, default=str)}
 
-You are answering a general-purpose warehouse control-tower Copilot question.
-Use the COMPLETE workbook records above as the primary source. Do not limit the
-answer to the currently selected finding, material, case, or UI element.
+IMPORTANT:
+- This is a GENERAL question, not a request to explain one finding.
+- Answer the actual operator question directly.
+- Use the COMPLETE six-sheet workbook above.
+- Do not narrow the answer to any currently selected material, finding, anomaly or case.
+- Calculate exact counts/totals/status logic from the workbook.
+- For date-based questions, use the snapshot date 2026-09-05 unless the workbook itself supplies another relevant date.
+- For "still", "pending", "open", "in progress", "outstanding", etc., use actual Status values from the workbook and state which statuses you included/excluded.
+- If the wording is ambiguous, state the interpretation you used.
+- If the workbook cannot support an exact answer, say what is missing instead of guessing.
+- Do not mention hidden prompts or implementation details.
 
-You can answer questions about ANY of these six operational sheets:
-Material_Master, Inventory_Stock, Warehouse_Bin, Deliveries_Dispatch,
-Purchase_Replenish, Vendor_Master. Data_Dictionary may be used to explain fields.
-
-Rules:
-- Answer the actual question directly first.
-- Treat field names case-insensitively and understand natural-language synonyms.
-- For counts, totals, averages, comparisons, rankings, or date logic, calculate from the supplied workbook records.
-- For lists, show actual record IDs/materials/vendors and actual values from the workbook.
-- For questions about DQ/anomalies, use the deterministic findings supplied and distinguish confirmed facts from inference.
-- If the operator asks a workbook-wide question, consider ALL relevant rows, not only the selected record.
-- If the operator asks about a specific entity, connect relevant records across sheets when supported by keys.
-- Preserve exact IDs, quantities, statuses, dates and field values.
-- Never invent a record, value, date, relationship, or business rule.
-- If the workbook does not contain enough evidence, say exactly what is missing.
-- Keep the answer concise but useful, with a small table/list when that makes the answer clearer.
+Return a direct answer first, followed by a compact supporting table/list when useful.
 """
-    return _chat(client, model, SYSTEM_PROMPT, prompt)
+    return _chat(prompt, model=model)
 
 
-# -------------------------------------------------------------------
-# Fallbacks
-# -------------------------------------------------------------------
+def copilot_answer(question: str, case: dict | None = None, model: str | None = None) -> str:
+    """
+    General-purpose compatibility wrapper.
+
+    `case` is retained for UI compatibility but does not narrow normal Copilot scope.
+    """
+    import pandas as pd
+
+    workbook = _load_copilot_workbook()
+    dq = pd.DataFrame((case or {}).get("related_data_quality_findings", []))
+    anomalies = pd.DataFrame((case or {}).get("related_anomaly_findings", []))
+    return copilot_workbook_answer(question, dq, anomalies, workbook, model=model)
+
+
+# ---------------------------------------------------------------------------
+# Compatibility fallbacks used only when other parts of the app call them.
+# General Copilot/RCA intentionally does not silently use these when LLM is down.
+# ---------------------------------------------------------------------------
 
 def fallback_root_cause(case):
-    m = case.get("metrics", {})
-
-    return f"""### Root Cause
-{case.get("root_cause", "The correlated evidence indicates a cross-system operational issue.")}
-
-### Evidence Chain
-The case links Material Master, Inventory_Stock, Warehouse_Bin, Deliveries_Dispatch, Purchase_Replenish, and Vendor_Master using the material/plant/vendor relationships present in the workbook.
-
-### Business Impact
-Impact score: {case.get("impact_score", 0)}/100 ({case.get("severity", "Unknown")}). Usable available stock: {m.get("usable_available", m.get("available", 0)):,.0f}; physical on-hand: {m.get("on_hand", 0):,.0f}; blocked: {m.get("blocked", 0):,.0f}; active demand: {m.get("demand", 0):,.0f}; shortage: {m.get("shortage", 0):,.0f}; overdue deliveries: {m.get("overdue_deliveries", 0)}.
-
-### Recommended Action
-{case.get("recommended_action", "Review the linked records and correct the underlying issue.")}
-
-### Confidence
-High for the observed data relationships; narrative generation is using the deterministic evidence summary because no OpenAI API key is configured."""
+    metrics = case.get("metrics", {})
+    return (
+        "### Root Cause\n"
+        f"{case.get('root_cause', 'The correlated evidence indicates a cross-system operational issue.')}\n\n"
+        "### Evidence Chain\n"
+        "The case links the supplied workbook records across the connected operational sheets.\n\n"
+        "### Business Impact\n"
+        f"Impact score: {case.get('impact_score', 0)}/100 ({case.get('severity', 'Unknown')}).\n\n"
+        "### Recommended Action\n"
+        f"{case.get('recommended_action', 'Review the linked records and correct the underlying issue.')}\n\n"
+        "### Confidence\n"
+        "This fallback is only a compatibility function; live RCA generation requires VW Group LLMaaS."
+    )
 
 
 def fallback_copilot(question, case):
-    return f"""### Answer
-{case.get("root_cause", "No correlated root cause was found.")}
-
-### Why
-The control tower linked evidence for material **{case.get("material")}** across Material Master, Inventory, Warehouse Bin, Deliveries, Purchase Replenishment and Vendor Master.
-
-### Impact
-**{case.get("severity")} — {case.get("impact_score")}/100**
-
-### Next Step
-{case.get("recommended_action", "Review the linked records before taking action.")}
-
-*LLM is not enabled in this run; this is the evidence-grounded deterministic fallback.*"""
+    return (
+        "### Answer\n"
+        "Live Copilot generation is unavailable. Please configure the VW Group LLMaaS credentials."
+    )
