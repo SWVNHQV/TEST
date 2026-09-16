@@ -412,6 +412,21 @@ def evidence_text(e):
         parts.append(f"{k}={val}")
     return " · ".join(parts)
 
+# Overview attention metrics are computed once after the workbook pipeline.
+critical_count = 0
+high_count = 0
+if cases is not None and not cases.empty and "severity" in cases.columns:
+    severity = cases["severity"].astype(str).str.lower()
+    critical_count = int((severity == "critical").sum())
+    high_count = int((severity == "high").sum())
+
+pending = sum(
+    1 for _, _case in cases.iterrows()
+    if st.session_state.actions.get(
+        str(_case.get("case_id", "")).strip(), {}
+    ).get("status") == "Pending"
+) if cases is not None and not cases.empty else 0
+
 def build_finding_context(finding, data, dq, anomalies):
     """Build exact evidence for one DQ/anomaly finding for Copilot."""
     f = finding.to_dict() if hasattr(finding, "to_dict") else dict(finding)
