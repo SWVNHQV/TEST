@@ -21,129 +21,137 @@ bg_layer = (
     f"url('{BG_URL}')"
 )
 
+# -------------------------------------------------------------------
+# HCI-first visual system
+# - Visibility: high contrast and clear hierarchy
+# - Recognition: icons + labels in navigation
+# - Consistency: reusable card/pill/button patterns
+# - Feedback: clear active/hover states
+# - Aesthetics: soft warehouse background with readable surfaces
+# -------------------------------------------------------------------
 st.markdown("""
 <style>
-/* Warehouse image background */
-.stApp{
-    background: __BG_LAYER__;
-    background-size:cover;
-    background-position:center center;
-    background-attachment:fixed;
-    background-repeat:no-repeat;
+:root{
+    --navy:#14395f;
+    --blue:#1769b0;
+    --ink:#233952;
+    --muted:#66788f;
+    --line:#d8e2ed;
+    --panel:rgba(255,255,255,.94);
+    --panel-soft:rgba(248,251,255,.90);
 }
-.block-container{max-width:1500px;padding-top:1.1rem;padding-bottom:3rem}
 
-/* Keep the background visible without reducing readability */
-.main .block-container{background:transparent}
+html, body, [class*="css"]{
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 
+/* Background: visible, but subordinate to information */
+.stApp{
+    background:
+        linear-gradient(rgba(238,244,249,.86),rgba(238,244,249,.86)),
+        url('https://static.vecteezy.com/system/resources/previews/030/592/227/large_2x/retail-warehouse-full-of-shelves-with-goods-in-cardboard-boxes-and-packages-logistics-sorting-and-distribution-facility-for-product-delivery-generative-ai-photo.jpeg')
+        center center / cover fixed no-repeat !important;
+}
+[data-testid="stAppViewContainer"]{
+    background:transparent !important;
+}
+[data-testid="stHeader"]{
+    background:rgba(255,255,255,.88) !important;
+}
+.block-container{
+    max-width:1320px !important;
+    padding-top:1.15rem !important;
+    padding-bottom:2.4rem !important;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"]{
+    background:rgba(241,246,251,.97) !important;
+    border-right:1px solid #d6e1ec !important;
+}
+section[data-testid="stSidebar"] .block-container{
+    padding:1.2rem 1rem 1.5rem !important;
+}
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3{
+    color:var(--navy) !important;
+    font-weight:800 !important;
+}
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] .stCaption{
+    color:#5e728a !important;
+}
+section[data-testid="stSidebar"] .stDivider{
+    border-color:#ccd9e6 !important;
+}
 
 /* Hero */
 .hero{
-    background:linear-gradient(135deg,#081b3a 0%,#12366d 52%,#2459a8 100%);
-    color:white;border-radius:24px;padding:28px 34px 24px;margin-bottom:12px;
-    box-shadow:0 12px 30px rgba(8,27,58,.16)
+    background:linear-gradient(135deg,#0b2a50 0%,#174a86 58%,#2a67ad 100%);
+    color:#fff !important;
+    border-radius:24px;
+    padding:28px 34px 24px;
+    margin:0 0 14px;
+    box-shadow:0 16px 34px rgba(20,52,88,.18);
 }
-.hero h1{font-size:2.15rem;margin:0;font-weight:800;letter-spacing:-.02em}
-.hero p{opacity:.90;margin:.45rem 0 0;font-size:.98rem;font-weight:550}
-
-/* Overview */
-.section-title{font-size:1.45rem;font-weight:800;color:#172033;margin:4px 0 2px}
-.section-subtitle{color:#697386;margin-bottom:16px}
-.overview-card{
-    background:rgba(255,255,255,.96);border:1px solid #dce5ef;border-radius:16px;
-    padding:16px 17px 15px;min-height:136px;
-    box-shadow:0 5px 18px rgba(15,30,60,.055)
+.hero h1{
+    color:#fff !important;
+    font-size:2.35rem !important;
+    line-height:1.08 !important;
+    margin:0 !important;
+    font-weight:850 !important;
+    letter-spacing:-.035em !important;
 }
-.overview-card .icon{
-    width:36px;height:36px;border-radius:11px;display:flex;
-    align-items:center;justify-content:center;font-size:18px;font-weight:800;
-    margin-bottom:12px
+.hero p{
+    color:#e8f1fb !important;
+    font-size:1rem !important;
+    line-height:1.45 !important;
+    margin:.65rem 0 0 !important;
+    font-weight:600 !important;
 }
-.overview-card .label{font-size:.88rem;color:#667085;font-weight:650}
-.overview-card .value{font-size:1.75rem;line-height:1.05;font-weight:850;color:#182235;margin:3px 0 7px}
-.overview-card .desc{font-size:.78rem;color:#7a8495;line-height:1.35}
-.blue .icon{background:#e7f0ff;color:#2359a8}
-.teal .icon{background:#e4f8f5;color:#087f73}
-.amber .icon{background:#fff3d8;color:#a66a00}
-.purple .icon{background:#f0eaff;color:#6f42c1}
-.red .icon{background:#ffe8e7;color:#c23b35}
-.green .icon{background:#e5f7eb;color:#24824a}
 
-.health-card{
-    background:#fff;border:1px solid #e2e8f0;border-radius:18px;
-    padding:17px 19px;box-shadow:0 5px 18px rgba(15,30,60,.045)
+/* Navigation */
+.nav-kicker{
+    font-size:.78rem;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:#65778d;
+    margin:1px 0 5px;
 }
-.health-card .big{font-size:1.7rem;font-weight:850;margin-top:4px}
-.health-card .small{font-size:.78rem;color:#737e90}
-.health-title{font-weight:750;color:#253047}
-.health-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
-.dot-red{background:#df4b45}.dot-amber{background:#e3a629}.dot-blue{background:#4c78c2}.dot-green{background:#37a56a}
-
-/* Workflow */
-.workflow{
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    margin:4px 0 2px
+.nav-hint{
+    color:#72839a;
+    font-size:.88rem;
+    margin:0 0 7px;
 }
-.workflow-step{
-    background:#fff;border:1px solid #e0e6ef;border-radius:14px;
-    padding:12px 15px;min-width:135px;box-shadow:0 4px 14px rgba(15,30,60,.04)
-}
-.workflow-step .num{
-    display:inline-flex;width:24px;height:24px;border-radius:50%;
-    align-items:center;justify-content:center;background:#e9f0fb;color:#1f4f93;
-    font-size:.76rem;font-weight:800;margin-right:7px
-}
-.workflow-step strong{font-size:.88rem;color:#273249}
-.workflow-arrow{color:#98a2b3;font-weight:800}
-
-
-.overview-note{background:#eef4ff;border:1px solid #d7e3f7;border-radius:14px;padding:12px 15px;color:#52627a;font-size:.86rem;margin:4px 0 18px}
-.priority-strip{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 15px;color:#52627a;font-size:.88rem;box-shadow:0 3px 12px rgba(15,30,60,.035)}
-.priority-strip.ok{background:#eefaf2;border-color:#ccebd7;color:#28633f}
-.priority-label{font-weight:800;color:#253047}.priority-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 5px 1px 2px}.priority-dot.red{background:#df4b45}.priority-dot.amber{background:#e3a629}.priority-dot.blue{background:#4c78c2}.priority-sep{color:#c3cad5}
-.rca-header{display:flex;justify-content:space-between;align-items:center;gap:20px;background:#fff;border:1px solid #e1e7f0;border-radius:16px;padding:16px 18px;margin:8px 0 12px}.rca-kicker{font-size:.68rem;font-weight:800;letter-spacing:.08em;color:#7a8495}.rca-title{font-size:1.35rem;font-weight:850;color:#182235;line-height:1.15;margin-top:3px}.rca-material{font-size:.86rem;color:#697386;margin-top:4px}.rca-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.severity-pill,.impact-pill{border-radius:999px;padding:6px 10px;font-size:.78rem;font-weight:800}.severity-pill.critical{background:#ffe8e7;color:#b42318}.severity-pill.high{background:#fff3d8;color:#8a5a00}.severity-pill.medium{background:#eef4ff;color:#315c9d}.impact-pill{background:#f2f4f7;color:#4b5565}.rca-finding{margin-bottom:14px;padding:15px 17px !important;line-height:1.5}.ai-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#6f42c1;margin-bottom:5px}.compact-action{padding:11px 13px !important;font-size:.88rem;line-height:1.4}
-
-/* Existing components */
-.card{background:white;border:1px solid #e4e8ef;border-radius:18px;padding:18px;box-shadow:0 5px 20px rgba(15,30,60,.05)}
-.kpi{font-size:1.75rem;font-weight:800}.muted{color:#697386;font-size:.86rem}
-.chain{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:12px 0}
-.node{background:white;border:1px solid #dfe4ec;border-radius:10px;padding:9px 12px;font-weight:700}
-.arrow{color:#8290a5}
-.ai{background:#f5f1ff;border:1px solid #ddd2ff;border-radius:16px;padding:18px}
-.good{background:#eefaf2;border:1px solid #ccebd7;border-radius:14px;padding:14px}
-.warn{background:#fff8e8;border:1px solid #f2dfae;border-radius:14px;padding:14px}
-
-/* HCI navigation: visibility, recognition, consistency, feedback */
 div[data-baseweb="tab-list"]{
     display:flex !important;
     gap:6px !important;
     padding:6px !important;
-    margin:4px 0 18px !important;
-    background:rgba(246,249,253,.94) !important;
-    border:1px solid #d5dfeb !important;
-    border-radius:14px !important;
-    box-shadow:0 3px 12px rgba(24,55,91,.08) !important;
+    margin:0 0 18px !important;
+    background:rgba(232,239,247,.94) !important;
+    border:1px solid #cfdbe8 !important;
+    border-radius:15px !important;
+    box-shadow:0 4px 14px rgba(20,52,88,.08) !important;
     overflow-x:auto !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
     position:relative !important;
-    flex:1 0 auto !important;
-    min-width:118px !important;
-    min-height:46px !important;
-    height:46px !important;
-    padding:6px 13px 6px 38px !important;
+    min-height:44px !important;
+    height:44px !important;
+    padding:6px 13px 6px 37px !important;
     margin:0 !important;
-    border:1px solid transparent !important;
+    border:1px solid #d7e0ea !important;
     border-radius:10px !important;
-    background:transparent !important;
-    color:#334a67 !important;
-    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    background:rgba(255,255,255,.93) !important;
+    color:#29425f !important;
     font-size:14px !important;
-    font-weight:700 !important;
-    line-height:1.15 !important;
+    font-weight:750 !important;
+    line-height:1.1 !important;
     white-space:nowrap !important;
-    box-shadow:none !important;
-    transition:background .15s ease,box-shadow .15s ease,transform .15s ease !important;
+    box-shadow:0 2px 5px rgba(20,52,88,.05) !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
 div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
@@ -154,10 +162,10 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
     position:absolute !important;
-    left:12px !important;
+    left:11px !important;
     top:50% !important;
     transform:translateY(-50%) !important;
-    font-size:18px !important;
+    font-size:17px !important;
     line-height:1 !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
@@ -168,7 +176,6 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{con
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
-/* Color cue per function */
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
@@ -178,21 +185,18 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
 div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
-    background:#ffffff !important;
-    color:#123b72 !important;
-    border-left-color:#c8d6e6 !important;
-    border-right-color:#c8d6e6 !important;
-    border-bottom-color:#c8d6e6 !important;
-    box-shadow:0 3px 9px rgba(20,55,95,.10) !important;
+    background:#fff !important;
+    color:#0c4f91 !important;
+    box-shadow:0 4px 10px rgba(20,52,88,.10) !important;
+    transform:translateY(-1px) !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
-    background:#ffffff !important;
+    background:#fff !important;
     color:#0b4f96 !important;
-    border-left-color:#b7c9dd !important;
-    border-right-color:#b7c9dd !important;
-    border-bottom-color:#b7c9dd !important;
-    box-shadow:0 4px 12px rgba(20,55,95,.13) !important;
-    transform:translateY(-1px) !important;
+    border-left-color:#aac0d8 !important;
+    border-right-color:#aac0d8 !important;
+    border-bottom-color:#aac0d8 !important;
+    box-shadow:0 5px 12px rgba(20,52,88,.13) !important;
 }
 div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
 div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
@@ -201,206 +205,111 @@ div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
 }
 div[data-baseweb="tab-highlight"]{display:none !important;}
 
-/* Readability on warehouse background */
-.stMarkdown, .stCaption, label, [data-testid="stMetricLabel"]{
-    color:#334563 !important;
-}
-[data-testid="stMetricValue"]{
-    color:#12345b !important;
-}
+/* Typography / page hierarchy */
 h1,h2,h3,h4{
-    color:#12345b !important;
-}
-
-
-.workspace-hint{display:flex;align-items:center;gap:9px;color:#68758a;font-size:.86rem;margin:4px 0 8px;padding-left:2px}.workspace-hint span{font-size:1rem}
-
-/* Sidebar */
-section[data-testid="stSidebar"]{background:#eef3f9}
-section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
-.sidebar-brand{
-    background:linear-gradient(135deg,#0b1f44,#234a91);color:white;
-    border-radius:17px;padding:16px 17px;margin-bottom:16px
-}
-.sidebar-brand .title{font-weight:800;font-size:1.05rem}
-.sidebar-brand .sub{font-size:.76rem;opacity:.78;margin-top:3px}
-.status-pill{
-    border-radius:12px;padding:11px 13px;margin:8px 0;
-    font-weight:700;font-size:.82rem
-}
-.status-ok{background:#dff4e7;color:#1d7041;border:1px solid #bfe5cd}
-.status-warn{background:#fff1d8;color:#8a5a00;border:1px solid #efd59e}
-
-.hero h1, .hero h2, .hero h3, .hero .hero-title{
-    color:#ffffff !important;
-    text-shadow:0 1px 2px rgba(0,0,0,.18) !important;
-}
-.hero p, .hero .hero-subtitle{
-    color:#f3f7ff !important;
-}
-</style>
-""".replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-/* ===== IntelliWarehouse AI — HCI visual refinement ===== */
-:root{
-    --navy:#12365f;
-    --blue:#1f67b1;
-    --muted:#64748b;
-    --panel:rgba(255,255,255,.93);
-}
-
-/* Warehouse image stays visible but does not overpower information */
-[data-testid="stAppViewContainer"]{
-    background:
-      linear-gradient(rgba(239,245,250,.78),rgba(239,245,250,.78)),
-      url("https://static.vecteezy.com/system/resources/previews/030/592/227/large_2x/retail-warehouse-full-of-shelves-with-goods-in-cardboard-boxes-and-packages-logistics-sorting-and-distribution-facility-for-product-delivery-generative-ai-photo.jpeg")
-      center center / cover fixed no-repeat !important;
-}
-
-/* Sidebar: strong grouping, low cognitive load */
-[data-testid="stSidebar"]{
-    background:rgba(239,245,250,.97) !important;
-    border-right:1px solid #d5e0ec !important;
-}
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3{
     color:var(--navy) !important;
-}
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] label{
-    color:#52657d !important;
-}
-
-/* Hero */
-.hero{
-    box-shadow:0 12px 30px rgba(16,52,88,.16) !important;
-}
-.hero h1,
-.hero h2,
-.hero .hero-title{
-    color:#ffffff !important;
     font-weight:800 !important;
-    letter-spacing:-.8px !important;
 }
-.hero p,
-.hero .hero-subtitle{
-    color:#e8f1fb !important;
-}
+h2{font-size:1.55rem !important;}
+h3{font-size:1.16rem !important;}
+.stCaption, .muted{color:var(--muted) !important;}
+.section-subtitle{color:#6b7c92 !important;}
+.section-title{color:var(--navy) !important;font-size:1.45rem !important;font-weight:820 !important;}
 
-/* Navigation strip */
-div[data-baseweb="tab-list"]{
-    gap:6px !important;
-    padding:6px !important;
-    background:rgba(232,240,249,.90) !important;
-    border:1px solid #cbd9e8 !important;
-    border-radius:14px !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
-    min-height:44px !important;
-    height:44px !important;
-    padding:6px 12px 6px 35px !important;
-    margin:0 !important;
-    position:relative !important;
-    border-radius:10px !important;
-    border:1px solid #d4dfeb !important;
-    background:rgba(255,255,255,.94) !important;
-    color:#29425f !important;
-    font-size:14px !important;
-    font-weight:700 !important;
-    white-space:nowrap !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
-div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
-    color:#29425f !important;
-    font-size:14px !important;
-    font-weight:700 !important;
-    margin:0 !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
-    position:absolute !important;
-    left:10px !important;
-    top:50% !important;
-    transform:translateY(-50%) !important;
-    font-size:17px !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2)::before{content:"📊";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3)::before{content:"🧠";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4)::before{content:"🔗";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{content:"✅";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
-
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4){border-top:3px solid #0b82c9 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5){border-top:3px solid #18a66b !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:3px solid #d58a16 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
-
-div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
-    background:#ffffff !important;
-    color:#0b4f96 !important;
-    font-weight:850 !important;
-    border-color:#a9bfd7 !important;
-    box-shadow:0 4px 12px rgba(18,54,95,.14) !important;
-    transform:translateY(-1px) !important;
-}
-div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
-div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
-    color:#0b4f96 !important;
-    font-weight:850 !important;
-}
-
-/* Content hierarchy */
-h1,h2,h3,h4{
-    color:#12365f !important;
-    letter-spacing:-.25px !important;
-}
-.stCaption{
-    color:#64748b !important;
-}
-.card{
+/* Surface components */
+.card,.overview-card,.health-card{
     background:var(--panel) !important;
-    border:1px solid #d9e3ed !important;
-    box-shadow:0 5px 16px rgba(21,54,88,.08) !important;
+    border:1px solid var(--line) !important;
+    box-shadow:0 6px 18px rgba(20,52,88,.07) !important;
+}
+.overview-card{
+    border-radius:16px !important;
+    padding:15px 16px 14px !important;
+    min-height:134px !important;
+}
+.overview-card .label{
+    color:#61738a !important;
+    font-size:.87rem !important;
+    font-weight:700 !important;
+}
+.overview-card .value{
+    color:#172c46 !important;
+    font-size:1.9rem !important;
+    font-weight:850 !important;
+}
+.overview-card .desc{
+    color:#738399 !important;
+    font-size:.78rem !important;
+}
+.priority-strip{
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid var(--line) !important;
+    border-radius:13px !important;
+    box-shadow:0 3px 12px rgba(20,52,88,.06) !important;
+}
+.overview-note{
+    background:rgba(235,243,252,.94) !important;
+    border:1px solid #d1e0ef !important;
+    color:#506783 !important;
+    border-radius:13px !important;
 }
 
-/* KPI/attention strip */
-[data-testid="stMetric"]{
-    background:rgba(255,255,255,.92) !important;
-    border:1px solid #d9e3ed !important;
+/* Inputs, buttons and expanders */
+.stButton > button{
+    border-radius:9px !important;
+    font-weight:750 !important;
+    color:#123b66 !important;
+    background:#fff !important;
+    border:1px solid #b9cbdd !important;
+}
+.stButton > button[kind="primary"]{
+    color:#fff !important;
+    background:#1769b0 !important;
+    border-color:#1769b0 !important;
+}
+.stButton > button:hover{
+    border-color:#2d72af !important;
+    box-shadow:0 3px 9px rgba(20,52,88,.10) !important;
+}
+div[data-testid="stExpander"]{
+    background:rgba(255,255,255,.84) !important;
+    border:1px solid #cedbe8 !important;
     border-radius:12px !important;
 }
 
-/* Buttons: clear action hierarchy */
-.stButton > button{
-    border-radius:9px !important;
-    font-weight:700 !important;
-    border:1px solid #b9cbe0 !important;
-    color:#12365f !important;
-    background:#ffffff !important;
+/* Data tables */
+div[data-testid="stDataFrame"]{
+    border:1px solid #d3dfeb !important;
+    border-radius:12px !important;
+    overflow:hidden !important;
+    background:rgba(255,255,255,.95) !important;
 }
-.stButton > button:hover{
-    border-color:#4a82ba !important;
-    background:#f4f8fc !important;
+div[data-testid="stDataFrame"] *{
+    font-size:13px !important;
 }
-</style>
-""", unsafe_allow_html=True)
 
+/* RCA */
+.rca-header{
+    background:rgba(255,255,255,.96) !important;
+    border:1px solid #d8e2ed !important;
+    box-shadow:0 6px 18px rgba(20,52,88,.07) !important;
+}
+.ai{
+    background:rgba(246,242,255,.95) !important;
+    border:1px solid #ddd2f7 !important;
+}
+.good{
+    background:rgba(237,250,242,.95) !important;
+    border:1px solid #c9ead5 !important;
+}
 
-st.markdown("""
-<style>
+/* Responsive */
 @media (max-width: 1100px){
+    .hero{padding:23px 24px 20px !important;}
+    .hero h1{font-size:1.9rem !important;}
     div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
         font-size:13px !important;
-        padding-left:34px !important;
+        padding-left:32px !important;
         padding-right:9px !important;
     }
     div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
@@ -408,39 +317,24 @@ st.markdown("""
         font-size:13px !important;
     }
     div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
-        left:10px !important;
-        font-size:17px !important;
+        left:9px !important;
+        font-size:16px !important;
     }
 }
 </style>
 """, unsafe_allow_html=True)
 
 
-st.markdown("""
-<style>
-div[data-baseweb="tab-list"]{
-    gap:4px !important;
-    align-items:center !important;
-    padding:5px 3px !important;
-}
-@media (max-width: 1100px){
-    button[data-baseweb="tab"]{
-        font-size:13px !important;
-        padding:6px 9px !important;
-        margin:0 1px !important;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
+
+
+
+
 
 
 if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
 if "ai_cache" not in st.session_state: st.session_state.ai_cache={}
 
-BG_IMAGE = Path(__file__).parent / "bg.jpeg"
-if not BG_IMAGE.exists():
-    st.warning("Background image bg.jpeg was not found. Upload bg.jpeg next to app.py in the repository.")
 
 st.markdown("""
 <div class="hero">
@@ -449,22 +343,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='muted'>Workspace navigation</div>", unsafe_allow_html=True)
-# Compact navigation context
-st.markdown(
-    "<div class='muted'>Investigation workspace · select a tab to continue</div>",
-    unsafe_allow_html=True,
-)
+st.markdown("<div class='nav-kicker'>WORKSPACE</div>", unsafe_allow_html=True)
+st.markdown("<div class='nav-hint'>Investigate warehouse health, understand causes, approve actions, or inspect records.</div>", unsafe_allow_html=True)
 
 tabs=st.tabs([
-    "Overview",
-    "Operations",
-    "Root Cause AI",
-    "Trace Graph",
-    "Approvals",
-    "Copilot",
-    "Data Explorer",
-    "Audit",
+    "🏠 Overview",
+    "📊 Operations",
+    "🧠 Root Cause AI",
+    "🔗 Trace Graph",
+    "✅ Approvals",
+    "💬 Copilot",
+    "🗄️ Data Explorer",
+    "🧾 Audit",
 ])
 
 with st.sidebar:
@@ -595,148 +485,102 @@ def build_finding_context(finding, data, dq, anomalies):
         "recommended_action": "Review the exact finding and connected operational records before corrective action.",
     }
 
-# -------------------------------------------------------------------
-# Executive overview / landing section
-# -------------------------------------------------------------------
-critical_count = 0
-high_count = 0
-if cases is not None and not cases.empty and "severity" in cases.columns:
-    critical_count = int((cases["severity"].astype(str).str.lower() == "critical").sum())
-    high_count = int((cases["severity"].astype(str).str.lower() == "high").sum())
-
-pending = sum(
-    1 for _, _case in cases.iterrows()
-    if st.session_state.actions.get(
-        str(_case.get("case_id", "")).strip(), {}
-    ).get("status") == "Pending"
-) if cases is not None and not cases.empty else 0
-
-st.markdown(
-    """
-    <div class="section-title">Operations overview</div>
-    <div class="section-subtitle">
-        A quick health view of warehouse operations. Use the navigation to investigate, explain, trace, approve, or explore records.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-overview_cols = st.columns(6)
-overview_cards = [
-    ("blue", "▦", "Materials", len(data["Material_Master"]), "Master-data records in scope"),
-    ("teal", "◫", "Inventory", len(data["Inventory_Stock"]), "Stock records being monitored"),
-    ("amber", "↗", "Deliveries", len(data["Deliveries_Dispatch"]), "Inbound / outbound delivery records"),
-    ("purple", "▤", "Purchase Orders", len(data["Purchase_Replenish"]), "Replenishment records"),
-    ("red", "!", "Findings", len(dq) + len(anomalies), "Data-quality + process issues"),
-    ("green", "⌁", "RCA Cases", len(cases), "Cross-system cases correlated"),
-]
-for col, (tone, icon, label, value, desc) in zip(overview_cols, overview_cards):
-    with col:
-        st.markdown(
-            f"""
-            <div class="overview-card {tone}">
-                <div class="icon">{icon}</div>
-                <div class="label">{label}</div>
-                <div class="value">{value:,}</div>
-                <div class="desc">{desc}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-priority_items = []
-if critical_count:
-    priority_items.append(f"<span class='priority-dot red'></span><b>{critical_count}</b> Critical")
-if high_count:
-    priority_items.append(f"<span class='priority-dot amber'></span><b>{high_count}</b> High")
-if pending:
-    priority_items.append(f"<span class='priority-dot blue'></span><b>{pending}</b> Pending approval")
-if priority_items:
-    st.markdown(f"<div class='priority-strip'><span class='priority-label'>Needs attention</span>{'<span class=\"priority-sep\"> · </span>'.join(priority_items)}</div>", unsafe_allow_html=True)
-else:
-    st.markdown("<div class='priority-strip ok'><span class='priority-label'>Status</span><b>All clear</b> · No critical/high RCA cases or pending approvals</div>", unsafe_allow_html=True)
-
-st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-st.markdown("""
-<div class="overview-note">
-<b>Next:</b> use <b>Operations</b> to review issues, <b>Root Cause AI</b> to understand a case, and <b>Approvals</b> when a decision is required.
-</div>
-""", unsafe_allow_html=True)
-
 # Navigation is rendered directly below the hero for immediate visibility.
 
 
 with tabs[0]:
-    st.subheader("Operations Overview")
-    st.caption("Start with the health picture, then move into the investigation workflow.")
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(
-            f"""
-            <div class="card">
-                <div style="font-size:.78rem;color:#667085;font-weight:700">01 · FIND</div>
-                <div style="font-size:1.2rem;font-weight:800;margin:5px 0">What needs attention?</div>
-                <div style="color:#697386;font-size:.86rem;line-height:1.45">
-                    Review <b>{len(dq)}</b> data-quality findings and
-                    <b>{len(anomalies)}</b> process/inventory anomalies.
-                </div>
-            </div>
-            """, unsafe_allow_html=True
-        )
-    with c2:
-        st.markdown(
-            f"""
-            <div class="card">
-                <div style="font-size:.78rem;color:#667085;font-weight:700">02 · UNDERSTAND</div>
-                <div style="font-size:1.2rem;font-weight:800;margin:5px 0">Why is it happening?</div>
-                <div style="color:#697386;font-size:.86rem;line-height:1.45">
-                    Trace <b>{len(cases)}</b> cross-system cases across
-                    material, inventory, deliveries, POs and vendors.
-                </div>
-            </div>
-            """, unsafe_allow_html=True
-        )
-    with c3:
-        st.markdown(
-            f"""
-            <div class="card">
-                <div style="font-size:.78rem;color:#667085;font-weight:700">03 · DECIDE</div>
-                <div style="font-size:1.2rem;font-weight:800;margin:5px 0">What should happen next?</div>
-                <div style="color:#697386;font-size:.86rem;line-height:1.45">
-                    <b>{pending}</b> cases are awaiting human approval.
-                    Proposed actions remain simulated until a person approves them.
-                </div>
-            </div>
-            """, unsafe_allow_html=True
-        )
-
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-    st.markdown("### Recommended path")
+    st.markdown("<div class='section-title'>Operations overview</div>", unsafe_allow_html=True)
     st.markdown(
-        """
-        <div class="workflow">
-            <div class="workflow-step"><span class="num">1</span><strong>Operations</strong></div>
-            <span class="workflow-arrow">→</span>
-            <div class="workflow-step"><span class="num">2</span><strong>Root Cause AI</strong></div>
-            <span class="workflow-arrow">→</span>
-            <div class="workflow-step"><span class="num">3</span><strong>Trace Graph</strong></div>
-            <span class="workflow-arrow">→</span>
-            <div class="workflow-step"><span class="num">4</span><strong>Approvals</strong></div>
-            <span class="workflow-arrow">→</span>
-            <div class="workflow-step"><span class="num">5</span><strong>Audit</strong></div>
-        </div>
-        """,
+        "<div class='section-subtitle'>Start with the warehouse health picture, then move into the investigation workflow.</div>",
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+    overview_cols = st.columns(6)
+    overview_cards = [
+        ("blue", "▦", "Materials", len(data["Material_Master"]), "Master-data records in scope"),
+        ("teal", "◫", "Inventory", len(data["Inventory_Stock"]), "Stock records monitored"),
+        ("amber", "↗", "Deliveries", len(data["Deliveries_Dispatch"]), "Inbound / outbound records"),
+        ("purple", "▤", "Purchase Orders", len(data["Purchase_Replenish"]), "Replenishment records"),
+        ("red", "!", "Findings", len(dq) + len(anomalies), "Data-quality + process issues"),
+        ("green", "⌁", "RCA Cases", len(cases), "Cross-system cases correlated"),
+    ]
+    for col, (tone, icon, label, value, desc) in zip(overview_cols, overview_cards):
+        with col:
+            st.markdown(
+                f"""
+                <div class="overview-card {tone}">
+                    <div class="icon">{icon}</div>
+                    <div class="label">{label}</div>
+                    <div class="value">{value:,}</div>
+                    <div class="desc">{desc}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    priority_items = []
+    if critical_count:
+        priority_items.append(f"<span class='priority-dot red'></span><b>{critical_count}</b> Critical")
+    if high_count:
+        priority_items.append(f"<span class='priority-dot amber'></span><b>{high_count}</b> High")
+    if pending:
+        priority_items.append(f"<span class='priority-dot blue'></span><b>{pending}</b> Pending approval")
+    if priority_items:
+        st.markdown(
+            f"<div class='priority-strip'><span class='priority-label'>Needs attention</span>{'<span class=\"priority-sep\"> · </span>'.join(priority_items)}</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            "<div class='priority-strip ok'><span class='priority-label'>Status</span><b>All clear</b> · No critical/high RCA cases or pending approvals</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(
+            f"""<div class="card">
+                <div style="font-size:.76rem;color:#6a7b90;font-weight:800;letter-spacing:.04em">01 · FIND</div>
+                <div style="font-size:1.12rem;font-weight:820;color:#203b5e;margin:5px 0">What needs attention?</div>
+                <div style="color:#687b92;font-size:.84rem;line-height:1.45">
+                    Review <b>{len(dq)}</b> data-quality findings and <b>{len(anomalies)}</b> process/inventory anomalies.
+                </div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown(
+            f"""<div class="card">
+                <div style="font-size:.76rem;color:#6a7b90;font-weight:800;letter-spacing:.04em">02 · UNDERSTAND</div>
+                <div style="font-size:1.12rem;font-weight:820;color:#203b5e;margin:5px 0">Why is it happening?</div>
+                <div style="color:#687b92;font-size:.84rem;line-height:1.45">
+                    Trace <b>{len(cases)}</b> cross-system cases across materials, inventory, deliveries, POs and vendors.
+                </div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            f"""<div class="card">
+                <div style="font-size:.76rem;color:#6a7b90;font-weight:800;letter-spacing:.04em">03 · DECIDE</div>
+                <div style="font-size:1.12rem;font-weight:820;color:#203b5e;margin:5px 0">What should happen next?</div>
+                <div style="color:#687b92;font-size:.84rem;line-height:1.45">
+                    <b>{pending}</b> cases await human approval. Proposed actions remain simulated until approved.
+                </div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='overview-note'><b>Recommended path:</b> Operations → Root Cause AI → Trace Graph → Approvals → Audit</div>",
+        unsafe_allow_html=True,
+    )
     st.info(
-        "Tip: Use Copilot for natural-language questions such as "
-        "\"Why is this material short?\" or \"Explain DQ-0102\". "
-        "Use Data Explorer when you need to inspect the underlying workbook records."
+        "Use Copilot for natural-language questions such as \"Why is this material short?\" or \"Explain DQ-0102\". "
+        "Use Data Explorer when you need the underlying workbook records."
     )
 
 with tabs[1]:
@@ -822,7 +666,7 @@ with tabs[1]:
         )
 
 with tabs[2]:
-    st.subheader("AI Root Cause Analysis")
+    st.subheader("Root Cause AI")
     st.caption("Decision-focused view — only the evidence needed to understand and act on the selected case.")
 
     if cases.empty:
@@ -875,7 +719,7 @@ with tabs[2]:
                     st.dataframe(pd.DataFrame(records), width="stretch", hide_index=True)
 
 with tabs[3]:
-    st.subheader("Relationship Trace Graph")
+    st.subheader("Relationship trace")
     st.caption("Follow one material across the six operational sheets. Relationships are built from workbook keys.")
     if cases.empty:
         st.info("No correlated cases available.")
@@ -951,7 +795,7 @@ with tabs[4]:
             st.write(f"**Current status:** {state['status']}")
 
 with tabs[5]:
-    st.subheader("AI Warehouse Copilot")
+    st.subheader("Warehouse Copilot")
     st.caption("Ask about any finding, material, delivery, PO, vendor, or workbook-wide issue.")
     q=st.text_input(
         "Ask the control tower",
@@ -1079,7 +923,7 @@ with tabs[6]:
     st.dataframe(data[sheet],width="stretch",hide_index=True)
 
 with tabs[7]:
-    st.subheader("Audit Trail")
+    st.subheader("Audit trail")
     if st.session_state.audit:
         st.dataframe(pd.DataFrame(st.session_state.audit),width="stretch",hide_index=True)
     else:
