@@ -12,6 +12,46 @@ from llm import generate_root_cause, copilot_answer, copilot_workbook_answer, en
 
 st.set_page_config(page_title="IntelliWarehouse AI", page_icon="◈", layout="wide")
 
+
+def _safe_root_cause(case):
+    """Keep the UI alive when VW LLMaaS authentication is unavailable."""
+    try:
+        return generate_root_cause(case)
+    except Exception as exc:
+        return (
+            "### AI explanation unavailable\n\n"
+            "The deterministic warehouse analysis is still available above. "
+            "The VW LLMaaS request could not be completed. "
+            f"Authentication/service status: {type(exc).__name__}.\n\n"
+            "Check the VW_IDP_CLIENT_ID, VW_IDP_CLIENT_SECRET, and "
+            "LLM_API_CLIENT_ID values in Streamlit Secrets, then retry."
+        )
+
+
+def _safe_copilot(*args, **kwargs):
+    """Return a user-facing message instead of crashing on LLMaaS errors."""
+    try:
+        return copilot_answer(*args, **kwargs)
+    except Exception as exc:
+        return (
+            "**AI Copilot is temporarily unavailable.**\n\n"
+            "The workbook data remains available in Data Explorer. "
+            f"Service status: `{type(exc).__name__}`. Check the VW LLMaaS "
+            "credentials in Streamlit Secrets and retry."
+        )
+
+
+def _safe_workbook_copilot(*args, **kwargs):
+    try:
+        return copilot_workbook_answer(*args, **kwargs)
+    except Exception as exc:
+        return (
+            "**AI Copilot is temporarily unavailable.**\n\n"
+            f"Service status: `{type(exc).__name__}`. Check the VW LLMaaS "
+            "credentials in Streamlit Secrets and retry."
+        )
+
+
 # Warehouse background image hosted on Vecteezy.
 # Using the public image URL keeps the repository free of image assets.
 BG_URL = "https://static.vecteezy.com/system/resources/previews/030/592/227/large_2x/retail-warehouse-full-of-shelves-with-goods-in-cardboard-boxes-and-packages-logistics-sorting-and-distribution-facility-for-product-delivery-generative-ai-photo.jpeg"
@@ -118,22 +158,84 @@ div[data-baseweb="tab-list"]{
     gap:6px;background:#e9eef6;padding:6px;border-radius:15px;
     border:1px solid #dde4ee
 }
-button[data-baseweb="tab"]{
+/* Strong, visible, color-coded tab navigation */
+div[data-baseweb="tab-list"]{
+    display:flex !important;
+    gap:7px !important;
+    padding:7px !important;
+    background:rgba(226,235,247,.92) !important;
+    border:1px solid #c8d6e8 !important;
+    border-radius:15px !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
+    position:relative !important;
+    min-height:48px !important;
+    height:48px !important;
+    padding:7px 14px 7px 40px !important;
+    margin:0 !important;
     border-radius:11px !important;
-    padding:9px 13px !important;
-    font-weight:700 !important;
-    font-size:.94rem !important;
-    color:#243b63 !important;
-    border:1px solid transparent !important;
-    background:rgba(255,255,255,.28) !important;
+    border:1px solid #d0dbea !important;
+    background:rgba(255,255,255,.96) !important;
+    color:#1e3a5f !important;
+    font-size:15px !important;
+    font-weight:750 !important;
+    line-height:1.1 !important;
     white-space:nowrap !important;
+    box-shadow:0 2px 7px rgba(22,52,88,.08) !important;
 }
-button[data-baseweb="tab"][aria-selected="true"]{
-    background:rgba(255,255,255,.97) !important;
-    color:#0b4fa3 !important;
-    border-color:#cbd8ea !important;
-    box-shadow:0 3px 10px rgba(20,45,85,.10);
+div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
+div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
+    color:#1e3a5f !important;
+    font-size:15px !important;
+    font-weight:750 !important;
+    margin:0 !important;
 }
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
+    position:absolute !important;
+    left:13px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    font-size:20px !important;
+    line-height:1 !important;
+    font-weight:400 !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1)::before{content:"🏠";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2)::before{content:"📊";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3)::before{content:"🧠";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4)::before{content:"🔗";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5)::before{content:"✅";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6)::before{content:"💬";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7)::before{content:"🗄️";}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8)::before{content:"🧾";}
+
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(1){border-top:3px solid #2878d0 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(2){border-top:3px solid #159a72 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3){border-top:3px solid #7b4bc4 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4){border-top:3px solid #0b82c9 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(5){border-top:3px solid #18a66b !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(6){border-top:3px solid #d58a16 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(7){border-top:3px solid #3d65a6 !important;}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(8){border-top:3px solid #64748b !important;}
+
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"]{
+    background:#ffffff !important;
+    color:#0b4f96 !important;
+    border-color:#9fb7d2 !important;
+    box-shadow:0 5px 15px rgba(17,54,94,.16) !important;
+    transform:translateY(-1px) !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] > div,
+div[data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p{
+    color:#0b4f96 !important;
+    font-weight:850 !important;
+}
+div[data-baseweb="tab-list"] button[data-baseweb="tab"]:hover{
+    background:#ffffff !important;
+    color:#0b4f96 !important;
+    border-color:#91acd0 !important;
+    box-shadow:0 4px 12px rgba(17,54,94,.13) !important;
+}
+
 button[data-baseweb="tab"]:hover{color:#ffffff !important;background:#f8fafc !important}
 button[data-baseweb="tab"] span{font-size:.95rem}
 button[data-baseweb="tab"] p{display:flex;align-items:center;gap:6px}
@@ -177,6 +279,45 @@ section[data-testid="stSidebar"] .block-container{padding-top:1.2rem}
 }
 </style>
 """.replace("__BG_LAYER__", bg_layer), unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+@media (max-width: 1100px){
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"]{
+        font-size:13px !important;
+        padding-left:34px !important;
+        padding-right:9px !important;
+    }
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"] > div,
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"] p{
+        font-size:13px !important;
+    }
+    div[data-baseweb="tab-list"] button[data-baseweb="tab"]::before{
+        left:10px !important;
+        font-size:17px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+st.markdown("""
+<style>
+div[data-baseweb="tab-list"]{
+    gap:4px !important;
+    align-items:center !important;
+    padding:5px 3px !important;
+}
+@media (max-width: 1100px){
+    button[data-baseweb="tab"]{
+        font-size:13px !important;
+        padding:6px 9px !important;
+        margin:0 1px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
@@ -399,14 +540,14 @@ st.markdown(
 )
 
 tabs=st.tabs([
-    "🏠  Overview",
-    "📊  Operations",
-    "🧠  Root Cause AI",
-    "🔗  Trace Graph",
-    "✅  Approvals",
-    "💬  Copilot",
-    "🗄️  Data Explorer",
-    "🧾  Audit",
+    "Overview",
+    "Operations",
+    "Root Cause AI",
+    "Trace Graph",
+    "Approvals",
+    "Copilot",
+    "Data Explorer",
+    "Audit",
 ])
 
 with tabs[0]:
@@ -527,7 +668,7 @@ with tabs[1]:
         selected_finding = dq[dq["issue_id"].astype(str).eq(str(dq_choice))].iloc[0]
         finding_case = build_finding_context(selected_finding, data, dq, anomalies)
         with st.spinner("Copilot is checking the exact finding and connected workbook records..."):
-            st.markdown(copilot_answer(
+            st.markdown(_safe_copilot(
                 f"Explain {dq_choice} in detail. Start with the exact finding, then explain the direct evidence, why it matters, related findings, and the safest next step. Do not mix related findings into the exact finding.",
                 finding_case
             ))
@@ -603,7 +744,7 @@ with tabs[2]:
 
         if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}"):
             with st.spinner("AI is synthesizing the case evidence..."):
-                st.session_state.ai_cache[cid] = generate_root_cause(case)
+                st.session_state.ai_cache[cid] = _safe_root_cause(case)
         if cid in st.session_state.ai_cache:
             st.markdown(st.session_state.ai_cache[cid])
 
@@ -774,7 +915,7 @@ with tabs[5]:
                     "related_findings": rows,
                 }
                 with st.spinner("Copilot is explaining the matching field findings..."):
-                    st.markdown(copilot_answer(q, synthetic))
+                    st.markdown(_safe_copilot(q, synthetic))
         # Exact DQ-/AN- finding IDs and case/material questions are handled
         # only when a field-specific query was not already handled above.
         if not field_handled:
@@ -792,7 +933,7 @@ with tabs[5]:
             if finding_hit is not None:
                 finding_case = build_finding_context(finding_hit, data, dq, anomalies)
                 with st.spinner("Copilot is checking the exact finding and connected workbook records..."):
-                    st.markdown(copilot_answer(q, finding_case))
+                    st.markdown(_safe_copilot(q, finding_case))
             else:
                 hit = None
                 for _, r in cases.iterrows():
@@ -808,10 +949,10 @@ with tabs[5]:
                             break
                 if hit:
                     with st.spinner("Analyzing correlated evidence..."):
-                        st.markdown(copilot_answer(q, hit))
+                        st.markdown(_safe_copilot(q, hit))
                 else:
                     with st.spinner("Checking the entire workbook..."):
-                        st.markdown(copilot_workbook_answer(q, dq, anomalies, data))
+                        st.markdown(_safe_workbook_copilot(q, dq, anomalies, data))
 
 with tabs[6]:
     st.subheader("Data Explorer")
