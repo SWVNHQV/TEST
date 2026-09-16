@@ -112,22 +112,6 @@ section[data-testid="stSidebar"] .stDivider{
     font-weight:600 !important;
 }
 
-
-.sidebar-group{
-    color:#74869b;
-    font-size:.67rem;
-    letter-spacing:.09em;
-    font-weight:850;
-    margin:.05rem 0 .35rem;
-}
-.sidebar-group-label{
-    color:#4f6f92;
-    font-size:.64rem;
-    letter-spacing:.10em;
-    font-weight:850;
-    margin:.6rem 0 .35rem .15rem;
-}
-
 /* ===== Sidebar workspace navigation ===== */
 .page-kicker{
     font-size:.72rem;
@@ -221,6 +205,46 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
     font-weight:850;
     letter-spacing:.04em;
 }
+
+/* ===== Overview attention + workflow ===== */\n.attention-panel{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;
+    padding:11px 15px;margin:13px 0 14px;border:1px solid #d6e1ec;
+    border-radius:13px;background:rgba(255,255,255,.96);
+    box-shadow:0 4px 12px rgba(22,54,88,.06)
+}
+.attention-heading{display:flex;flex-direction:column;gap:2px;min-width:165px}
+.attention-title{color:#173d64;font-size:.82rem;font-weight:850}
+.attention-caption{color:#8a98a8;font-size:.66rem}
+.attention-items{display:flex;justify-content:flex-end;align-items:center;gap:9px;flex-wrap:wrap}
+.attention-item{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:750;border:1px solid #dde5ed}
+.attention-item.critical{background:#fff0ef;color:#b23d37;border-color:#f0cecc}
+.attention-item.high{background:#fff5e5;color:#99670d;border-color:#f0ddb9}
+.attention-item.pending{background:#edf5fc;color:#2c6399;border-color:#d1e1ef}
+.attention-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.attention-item.critical .attention-dot{background:#d54b45}
+.attention-item.high .attention-dot{background:#dc951d}
+.attention-item.pending .attention-dot{background:#3178bd}
+.attention-panel.clear{background:rgba(241,250,246,.96);border-color:#d6ebe0}
+.attention-clear{color:#2e6b57;font-size:.74rem;font-weight:700}
+.workflow-heading{color:#6d8097;font-size:.67rem;font-weight:850;letter-spacing:.09em;text-transform:uppercase;margin:2px 0 1px}
+.workflow-subheading{color:#8a98a8;font-size:.69rem;margin-bottom:7px}
+.workflow-card{position:relative;min-height:166px;padding:15px 16px 13px;border:1px solid #d6e1eb;border-radius:14px;background:rgba(255,255,255,.97);box-shadow:0 5px 14px rgba(18,54,95,.07);overflow:hidden}
+.workflow-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+.workflow-card.find::before{background:#2f75b9}
+.workflow-card.understand::before{background:#7549c5}
+.workflow-card.decide::before{background:#15986f}
+.workflow-top{display:flex;justify-content:space-between;align-items:center}
+.workflow-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#edf5fb;font-size:18px}
+.workflow-card.understand .workflow-icon{background:#f1ebff}
+.workflow-card.decide .workflow-icon{background:#eaf8f1}
+.workflow-step{color:#8b99a9;font-size:.65rem;font-weight:850}
+.workflow-kicker{color:#718399;font-size:.62rem;font-weight:850;letter-spacing:.08em;margin-top:12px}
+.workflow-title{color:#183e65;font-size:1.03rem;font-weight:850;line-height:1.18;margin-top:4px}
+.workflow-body{color:#71849a;font-size:.75rem;line-height:1.42;margin-top:7px}
+.workflow-destination{color:#2b6da9;font-size:.71rem;font-weight:800;margin-top:11px}
+.workflow-destination span{font-size:.88rem;margin-left:3px}
+.overview-help{display:flex;align-items:center;gap:9px;padding:10px 13px;margin-top:13px;border-radius:12px;border:1px solid #d5e3f2;background:rgba(239,247,255,.91);color:#4f6b88;font-size:.73rem;line-height:1.4}
+.help-icon{width:19px;height:19px;flex:0 0 19px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#2b73ba;color:#fff;font-size:.68rem;font-weight:850}
 
 /* ===== Operations summary cards ===== */
 .ops-summary-card{
@@ -340,91 +364,6 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
     line-height:1.05;
     margin-top:6px;
 }
-
-
-/* Sidebar operation sub-navigation */
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(2),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(3),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(4){
-    margin-left:8px !important;
-    padding-left:14px !important;
-}
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(5),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(6),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(7),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(8),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(9),
-section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] > label:nth-child(10){
-    margin-top:1px !important;
-}
-
-/* ===== Root Cause AI final HCI treatment ===== */
-.rca-page-head{margin:8px 0 12px}
-.rca-page-kicker{color:#7044c5;font-size:.68rem;font-weight:850;letter-spacing:.10em}
-.rca-page-title{color:#123f6b;font-size:1.65rem;font-weight:850;line-height:1.1;margin-top:3px}
-.rca-page-subtitle{color:#6f8299;font-size:.84rem;margin-top:5px}
-
-.rca-case-strip{
-    display:flex;align-items:center;justify-content:space-between;gap:18px;
-    padding:15px 18px;margin:7px 0 14px;
-    background:rgba(255,255,255,.97);border:1px solid #d5e1ec;border-radius:14px;
-    box-shadow:0 5px 15px rgba(18,54,95,.07);
-}
-.rca-label{color:#7a8a9e;font-size:.64rem;font-weight:850;letter-spacing:.09em}
-.rca-case-id{color:#173e67;font-size:1.28rem;font-weight:850;margin-top:2px}
-.rca-material{color:#75869a;font-size:.77rem;margin-top:2px}
-.rca-case-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.rca-severity,.rca-impact{
-    display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;
-    font-size:.75rem;font-weight:800;border:1px solid #d7e1eb;background:#f6f8fb;color:#485c74
-}
-.rca-severity.critical{background:#fff0ef;color:#b83f39;border-color:#f2cfcc}
-.rca-severity.high{background:#fff5e4;color:#a76a09;border-color:#f1ddbc}
-.rca-severity.medium{background:#eef4fc;color:#326aa3;border-color:#cfdded}
-
-.rca-panel{
-    padding:16px 17px;background:rgba(255,255,255,.96);
-    border:1px solid #d7e2ec;border-radius:14px;
-    box-shadow:0 5px 14px rgba(18,54,95,.06);margin-bottom:13px;
-}
-.rca-cause{border-left:4px solid #7548c6}
-.rca-evidence{border-left:4px solid #2f73b7}
-.rca-action{border-left:4px solid #15986f}
-.rca-impact-panel{border-left:4px solid #d48b1b}
-.rca-panel-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
-.rca-panel-icon{width:31px;height:31px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#eef4fa;font-size:16px}
-.rca-panel-kicker{color:#7a8a9d;font-size:.62rem;font-weight:850;letter-spacing:.09em}
-.rca-panel-title{color:#183f67;font-size:.98rem;font-weight:850;margin-top:2px}
-.rca-cause-copy{color:#344f6f;font-size:.88rem;line-height:1.55}
-.rca-evidence-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;color:#3d5570;font-size:.80rem;line-height:1.35;border-bottom:1px solid #edf1f5}
-.rca-evidence-row:last-child{border-bottom:0}
-.rca-check{color:#2b78bb;font-weight:900}
-.rca-muted{color:#7b8b9e;font-size:.80rem}
-.rca-action-copy{
-    color:#315960;font-size:.84rem;line-height:1.48;
-    padding:11px 12px;background:#eef9f4;border:1px solid #d5ece1;border-radius:10px;
-}
-.rca-impact-score{color:#183e66;font-size:1.8rem;font-weight:850;line-height:1;margin:3px 0 10px}
-.rca-impact-score span{color:#7b8c9f;font-size:.78rem;font-weight:700}
-.rca-impact-track{height:8px;border-radius:99px;background:#e8eef4;overflow:hidden}
-.rca-impact-fill{height:100%;border-radius:99px;background:#d48b1b}
-.rca-impact-note{color:#8090a2;font-size:.69rem;margin-top:6px}
-
-.rca-ai-box{
-    padding:14px 16px;margin-top:2px;
-    background:linear-gradient(135deg,rgba(238,246,255,.97),rgba(248,245,255,.97));
-    border:1px solid #cedded;border-radius:14px;
-}
-.rca-ai-kicker{color:#7044c5;font-size:.62rem;font-weight:850;letter-spacing:.09em}
-.rca-ai-title{color:#183f67;font-size:.96rem;font-weight:850;margin-top:2px}
-.rca-ai-copy{color:#73859a;font-size:.73rem;margin-top:4px;line-height:1.35}
-.rca-ai-output{
-    padding:15px 17px;margin:9px 0 13px;
-    background:#f7f4ff;border:1px solid #ded5f1;border-radius:13px;
-    color:#334c6a;line-height:1.55;font-size:.86rem;
-}
-.rca-ai-output-copy{margin-top:5px}
-
 
 /* Typography / page hierarchy */
 h1,h2,h3,h4{
@@ -556,9 +495,6 @@ if "actions" not in st.session_state: st.session_state.actions={}
 if "audit" not in st.session_state: st.session_state.audit=[]
 if "ai_cache" not in st.session_state: st.session_state.ai_cache={}
 
-if "ai_error" not in st.session_state:
-    st.session_state.ai_error = None
-
 
 st.markdown("""
 <div class="hero">
@@ -582,14 +518,10 @@ with st.sidebar:
     )
 
     st.markdown("<div class='sidebar-section-title'>WORKSPACE</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sidebar-group'>CORE</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sidebar-group-label'>OPERATIONS</div>", unsafe_allow_html=True)
     nav_options = [
         "🏠  Overview",
-        "🔎  Data Quality",
-        "⚙️  Inventory & Process",
-        "🧠  Correlated Cases",
-        "🧩  Root Cause AI",
+        "📊  Operations",
+        "🧠  Root Cause AI",
         "🔗  Trace Graph",
         "✅  Approvals",
         "💬  Copilot",
@@ -803,72 +735,111 @@ if selected_nav == '🏠  Overview':
                 unsafe_allow_html=True,
             )
 
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    priority_items = []
+    # ===== Overview: operational status =====
+    attention_items = []
     if critical_count:
-        priority_items.append(f"<span class='priority-dot red'></span><b>{critical_count}</b> Critical")
+        attention_items.append(
+            f"<div class='attention-item critical'><span class='attention-dot'></span>"
+            f"<span><b>{critical_count}</b> Critical</span></div>"
+        )
     if high_count:
-        priority_items.append(f"<span class='priority-dot amber'></span><b>{high_count}</b> High")
+        attention_items.append(
+            f"<div class='attention-item high'><span class='attention-dot'></span>"
+            f"<span><b>{high_count}</b> High</span></div>"
+        )
     if pending:
-        priority_items.append(f"<span class='priority-dot blue'></span><b>{pending}</b> Pending approval")
-    if priority_items:
+        attention_items.append(
+            f"<div class='attention-item pending'><span class='attention-dot'></span>"
+            f"<span><b>{pending}</b> Pending approval</span></div>"
+        )
+
+    if attention_items:
         st.markdown(
-            f"<div class='priority-strip'><span class='priority-label'>Needs attention</span>{'<span class=\"priority-sep\"> · </span>'.join(priority_items)}</div>",
+            "<div class='attention-panel'>"
+            "<div class='attention-heading'>"
+            "<span class='attention-title'>Needs attention</span>"
+            "<span class='attention-caption'>Items requiring operator review</span>"
+            "</div>"
+            "<div class='attention-items'>"
+            + "".join(attention_items)
+            + "</div></div>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            "<div class='priority-strip ok'><span class='priority-label'>Status</span><b>All clear</b> · No critical/high RCA cases or pending approvals</div>",
+            "<div class='attention-panel clear'>"
+            "<div class='attention-heading'>"
+            "<span class='attention-title'>Status</span>"
+            "<span class='attention-caption'>Current operational health</span>"
+            "</div>"
+            "<div class='attention-clear'>✓ No critical or high-priority items are currently flagged.</div>"
+            "</div>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(
-            f"""<div class="card">
-                <div style="font-size:.76rem;color:#6a7b90;font-weight:800;letter-spacing:.04em">01 · FIND</div>
-                <div style="font-size:1.12rem;font-weight:820;color:#203b5e;margin:5px 0">What needs attention?</div>
-                <div style="color:#687b92;font-size:.84rem;line-height:1.45">
-                    Review <b>{len(dq)}</b> data-quality findings and <b>{len(anomalies)}</b> process/inventory anomalies.
-                </div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.markdown(
-            f"""<div class="card">
-                <div style="font-size:.76rem;color:#6a7b90;font-weight:800;letter-spacing:.04em">02 · UNDERSTAND</div>
-                <div style="font-size:1.12rem;font-weight:820;color:#203b5e;margin:5px 0">Why is it happening?</div>
-                <div style="color:#687b92;font-size:.84rem;line-height:1.45">
-                    Trace <b>{len(cases)}</b> cross-system cases across materials, inventory, deliveries, POs and vendors.
-                </div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-    with c3:
-        st.markdown(
-            f"""<div class="card">
-                <div style="font-size:.76rem;color:#6a7b90;font-weight:800;letter-spacing:.04em">03 · DECIDE</div>
-                <div style="font-size:1.12rem;font-weight:820;color:#203b5e;margin:5px 0">What should happen next?</div>
-                <div style="color:#687b92;font-size:.84rem;line-height:1.45">
-                    <b>{pending}</b> cases await human approval. Proposed actions remain simulated until approved.
-                </div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='overview-note'><b>Recommended path:</b> Operations → Root Cause AI → Trace Graph → Approvals → Audit</div>",
+        "<div class='workflow-heading'>Investigation workflow</div>"
+        "<div class='workflow-subheading'>Three decisions, three destinations</div>",
         unsafe_allow_html=True,
     )
-    st.info(
-        "Use Copilot for natural-language questions such as \"Why is this material short?\" or \"Explain DQ-0102\". "
-        "Use Data Explorer when you need the underlying workbook records."
+
+    c1, c2, c3 = st.columns(3, gap="medium")
+    workflow_cards = [
+        (
+            c1, "find", "01", "🔎", "FIND",
+            "What needs attention?",
+            f"<b>{len(dq):,}</b> data-quality findings and "
+            f"<b>{len(anomalies):,}</b> process/inventory anomalies.",
+            "Data Quality",
+        ),
+        (
+            c2, "understand", "02", "🧠", "UNDERSTAND",
+            "Why is it happening?",
+            f"<b>{len(cases):,}</b> correlated cases connect materials, "
+            "inventory, deliveries, POs and vendors.",
+            "Correlated Cases",
+        ),
+        (
+            c3, "decide", "03", "✅", "DECIDE",
+            "What should happen next?",
+            f"<b>{pending:,}</b> cases await human approval. "
+            "Actions remain simulated until approved.",
+            "Approvals",
+        ),
+    ]
+
+    for col, tone, step, icon, kicker, title, body, destination in workflow_cards:
+        with col:
+            st.markdown(
+                f"""
+                <div class="workflow-card {tone}">
+                    <div class="workflow-top">
+                        <div class="workflow-icon">{icon}</div>
+                        <div class="workflow-step">{step}</div>
+                    </div>
+                    <div class="workflow-kicker">{kicker}</div>
+                    <div class="workflow-title">{title}</div>
+                    <div class="workflow-body">{body}</div>
+                    <div class="workflow-destination">Open {destination} <span>→</span></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.markdown(
+        "<div class='overview-help'>"
+        "<span class='help-icon'>i</span>"
+        "<div><b>Next step:</b> use the sidebar to move from finding → "
+        "correlation → root cause → trace → human approval.</div>"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
-if selected_nav == '🔎  Data Quality':
+
+if selected_nav == '📊  Operations':
+    st.subheader("Prioritized operational worklist")
+    st.caption("Start here: review Critical/High findings, open Root Cause AI, then approve the proposed fix.")
+
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker'>FINDINGS</div>"
@@ -877,6 +848,7 @@ if selected_nav == '🔎  Data Quality':
         "</div></div>",
         unsafe_allow_html=True,
     )
+
     if dq.empty:
         st.success("No data-quality findings.")
     else:
@@ -987,419 +959,85 @@ if selected_nav == '🔎  Data Quality':
                 finding_case
             ))
 
-
-if selected_nav == '⚙️  Inventory & Process':
-    st.markdown(
-        "<div class='findings-header'><div>"
-        "<div class='findings-kicker process-kicker'>OPERATIONS</div>"
-        "<div class='findings-title'>Inventory & process anomalies</div>"
-        "<div class='findings-subtitle'>Review operational exceptions, identify high-impact issues, and inspect the records behind them.</div>"
-        "</div></div>",
-        unsafe_allow_html=True,
-    )
-
+    st.markdown("### Inventory & Process Anomalies")
     if anomalies.empty:
         st.success("No inventory/process anomalies.")
     else:
-        sev = anomalies["severity"].astype(str).str.strip().str.title()
-        severity_counts = {level: int((sev == level).sum()) for level in ["Critical", "High", "Medium", "Low"]}
-
-        a1, a2, a3, a4 = st.columns(4)
-        for col, (label, count, tone) in zip(
-            [a1, a2, a3, a4],
-            [
-                ("Critical", severity_counts["Critical"], "critical"),
-                ("High", severity_counts["High"], "high"),
-                ("Medium", severity_counts["Medium"], "medium"),
-                ("Low", severity_counts["Low"], "low"),
-            ],
-        ):
-            with col:
-                st.markdown(
-                    f"<div class='finding-severity {tone}'>"
-                    f"<div class='finding-severity-label'>{label}</div>"
-                    f"<div class='finding-severity-value'>{count:,}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-
-        i1, i2, i3 = st.columns([1.0, 1.0, 1.8])
-        with i1:
-            anomaly_severity = st.selectbox(
-                "Severity",
-                ["All", "Critical", "High", "Medium", "Low"],
-                key="anomaly_severity_filter",
-            )
-        with i2:
-            anomaly_entities = ["All"] + sorted(anomalies["entity"].astype(str).dropna().unique().tolist())
-            anomaly_entity = st.selectbox(
-                "Record",
-                anomaly_entities,
-                key="anomaly_entity_filter",
-            )
-        with i3:
-            anomaly_search = st.text_input(
-                "Search anomaly",
-                placeholder="ID, issue, record, or explanation",
-                key="anomaly_search_filter",
-            )
-
-        filtered_anomalies = anomalies.copy()
-        if anomaly_severity != "All":
-            filtered_anomalies = filtered_anomalies[
-                filtered_anomalies["severity"].astype(str).str.title() == anomaly_severity
-            ]
-        if anomaly_entity != "All":
-            filtered_anomalies = filtered_anomalies[
-                filtered_anomalies["entity"].astype(str) == anomaly_entity
-            ]
-        if anomaly_search.strip():
-            q = anomaly_search.strip().lower()
-            mask = (
-                filtered_anomalies["issue_id"].astype(str).str.lower().str.contains(q, na=False)
-                | filtered_anomalies["entity"].astype(str).str.lower().str.contains(q, na=False)
-                | filtered_anomalies["title"].astype(str).str.lower().str.contains(q, na=False)
-                | filtered_anomalies["detail"].astype(str).str.lower().str.contains(q, na=False)
-            )
-            filtered_anomalies = filtered_anomalies[mask]
-
-        st.caption(f"Showing {len(filtered_anomalies):,} of {len(anomalies):,} inventory/process anomalies")
-
-        an_view = filtered_anomalies[["issue_id","severity","entity","title","detail"]].copy()
-        an_view.columns = ["ID","Severity","Record","Issue","Explanation"]
-        an_view["Explanation"] = (
-            an_view["Explanation"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 145)
-        )
-        st.dataframe(
-            an_view,
-            width="stretch",
-            hide_index=True,
-            height=340,
-            column_config={
-                "ID": st.column_config.TextColumn("ID", width="small"),
-                "Severity": st.column_config.TextColumn("Severity", width="small"),
-                "Record": st.column_config.TextColumn("Record", width="medium"),
-                "Issue": st.column_config.TextColumn("Issue", width="medium"),
-                "Explanation": st.column_config.TextColumn("Explanation", width="large"),
-            },
-        )
-
+        an_view = anomalies[["issue_id","severity","entity","title","detail","evidence"]].copy()
+        an_view["evidence"] = an_view["evidence"].apply(evidence_text)
+        an_view.columns = ["ID","Severity","Record","Issue","Explanation","Actual values"]
+        st.dataframe(an_view,width="stretch", hide_index=True)
         st.download_button(
-            "Export anomalies",
-            filtered_anomalies.to_csv(index=False).encode("utf-8"),
-            "intelliwarehouse_inventory_process_anomalies.csv",
-            "text/csv",
-            use_container_width=False,
+            "Export anomaly findings",
+            anomalies.to_csv(index=False).encode("utf-8"),
+            "nexuschain_anomaly_findings.csv",
+            "text/csv"
         )
 
-if selected_nav == '🧠  Correlated Cases':
-    st.markdown(
-        "<div class='findings-header'><div>"
-        "<div class='findings-kicker rca-kicker'>OPERATIONS</div>"
-        "<div class='findings-title'>Correlated root-cause cases</div>"
-        "<div class='findings-subtitle'>Prioritize cross-system cases by severity and impact before opening Root Cause AI.</div>"
-        "</div></div>",
-        unsafe_allow_html=True,
-    )
-
+    st.markdown("### Correlated root causes")
     if cases.empty:
         st.info("No cross-system root-cause cases detected.")
     else:
-        case_sev = cases["severity"].astype(str).str.strip().str.title()
-        c_counts = {level: int((case_sev == level).sum()) for level in ["Critical", "High", "Medium", "Low"]}
-
-        c1, c2, c3, c4 = st.columns(4)
-        for col, (label, count, tone) in zip(
-            [c1, c2, c3, c4],
-            [
-                ("Critical", c_counts["Critical"], "critical"),
-                ("High", c_counts["High"], "high"),
-                ("Medium", c_counts["Medium"], "medium"),
-                ("Low", c_counts["Low"], "low"),
-            ],
-        ):
-            with col:
-                st.markdown(
-                    f"<div class='finding-severity {tone}'>"
-                    f"<div class='finding-severity-label'>{label}</div>"
-                    f"<div class='finding-severity-value'>{count:,}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-
-        r1, r2, r3 = st.columns([1.0, 1.0, 1.8])
-        with r1:
-            case_filter = st.selectbox(
-                "Severity",
-                ["All", "Critical", "High", "Medium", "Low"],
-                key="case_severity_filter",
-            )
-        with r2:
-            material_options = ["All"] + sorted(cases["material"].astype(str).dropna().unique().tolist())
-            material_filter = st.selectbox(
-                "Material",
-                material_options,
-                key="case_material_filter",
-            )
-        with r3:
-            case_search = st.text_input(
-                "Search case",
-                placeholder="Case ID, material, signal, or root cause",
-                key="case_search_filter",
-            )
-
-        filtered_cases = cases.copy()
-        if case_filter != "All":
-            filtered_cases = filtered_cases[
-                filtered_cases["severity"].astype(str).str.title() == case_filter
-            ]
-        if material_filter != "All":
-            filtered_cases = filtered_cases[
-                filtered_cases["material"].astype(str) == material_filter
-            ]
-        if case_search.strip():
-            q = case_search.strip().lower()
-            mask = (
-                filtered_cases["case_id"].astype(str).str.lower().str.contains(q, na=False)
-                | filtered_cases["material"].astype(str).str.lower().str.contains(q, na=False)
-                | filtered_cases["signals"].astype(str).str.lower().str.contains(q, na=False)
-                | filtered_cases["root_cause"].astype(str).str.lower().str.contains(q, na=False)
-            )
-            filtered_cases = filtered_cases[mask]
-
-        st.caption(f"Showing {len(filtered_cases):,} of {len(cases):,} correlated cases")
-
-        case_view = filtered_cases[
-            ["case_id","material","severity","impact_score","signals","root_cause","recommended_action"]
-        ].copy()
-        case_view["signals"] = case_view["signals"].apply(lambda x: ", ".join(x) if isinstance(x, (list, tuple)) else str(x))
-        case_view["root_cause"] = case_view["root_cause"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 125)
-        case_view["recommended_action"] = case_view["recommended_action"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 110)
-        case_view.columns = ["Case","Material","Severity","Impact","Signals","Root cause","Recommended fix"]
-        st.dataframe(
-            case_view,
-            width="stretch",
-            hide_index=True,
-            height=360,
-            column_config={
-                "Case": st.column_config.TextColumn("Case", width="small"),
-                "Material": st.column_config.TextColumn("Material", width="small"),
-                "Severity": st.column_config.TextColumn("Severity", width="small"),
-                "Impact": st.column_config.NumberColumn("Impact", format="%d"),
-                "Signals": st.column_config.TextColumn("Signals", width="medium"),
-                "Root cause": st.column_config.TextColumn("Root cause", width="large"),
-                "Recommended fix": st.column_config.TextColumn("Recommended fix", width="large"),
-            },
-        )
+        df=cases[["case_id","material","severity","impact_score","signals","root_cause","recommended_action"]].copy()
+        df["signals"]=df["signals"].apply(lambda x:", ".join(x))
+        df.columns=["Case","Material","Severity","Impact","Signals","Root cause","Recommended fix"]
+        st.dataframe(df,width="stretch",hide_index=True)
         st.download_button(
-            "Export correlated cases",
-            filtered_cases.to_csv(index=False).encode("utf-8"),
-            "intelliwarehouse_correlated_cases.csv",
-            "text/csv",
+            "Export detected issues + proposed fixes",
+            df.to_csv(index=False).encode("utf-8"),
+            "nexuschain_detected_issues_and_fixes.csv",
+            "text/csv"
         )
 
-
-if 'Root Cause AI' in str(selected_nav):
-    st.markdown(
-        """
-        <div class="rca-page-head">
-            <div class="rca-page-kicker">AI INVESTIGATION</div>
-            <div class="rca-page-title">Root Cause AI</div>
-            <div class="rca-page-subtitle">Understand one correlated case at a time: cause → evidence → impact → action.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+if selected_nav == '🧠  Root Cause AI':
+    st.subheader("Root Cause AI")
+    st.caption("Decision-focused view — only the evidence needed to understand and act on the selected case.")
 
     if cases.empty:
         st.info("No correlated cases available.")
     else:
-        labels = [
-            f"{r.case_id} · {r.material} · {r.severity} · {r.impact_score}/100"
-            for _, r in cases.iterrows()
-        ]
-
-        st.markdown("**CASE SELECTION**")
-        idx = st.selectbox(
-            "Case",
-            range(len(labels)),
-            format_func=lambda i: labels[i],
-            key="rca_case_select",
-            label_visibility="collapsed",
-        )
-
+        labels = [f"{r.case_id} · {r.material} · {r.severity} · {r.impact_score}/100" for _, r in cases.iterrows()]
+        idx = st.selectbox("Case", range(len(labels)), format_func=lambda i: labels[i], key="rca_case_select")
         case = cases.iloc[idx].to_dict()
         cid = str(case.get("case_id", ""))
-        material = str(case.get("material", ""))
-        severity = str(case.get("severity", "Unknown")).title()
-        impact = int(case.get("impact_score", 0) or 0)
+        severity = str(case.get("severity", "Unknown"))
+        sev_class = "critical" if severity.lower() == "critical" else "high" if severity.lower() == "high" else "medium"
 
-        if severity.lower() == "critical":
-            sev_tone = "critical"
-        elif severity.lower() == "high":
-            sev_tone = "high"
-        else:
-            sev_tone = "medium"
+        st.markdown(f"""
+        <div class='rca-header'>
+          <div><div class='rca-kicker'>CASE</div><div class='rca-title'>{cid}</div><div class='rca-material'>{case.get('material','')}</div></div>
+          <div class='rca-meta'><span class='severity-pill {sev_class}'>{severity}</span><span class='impact-pill'>Impact {case.get('impact_score',0)}/100</span></div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown(
-            f"""
-            <div class="rca-case-strip">
-                <div>
-                    <div class="rca-label">SELECTED CASE</div>
-                    <div class="rca-case-id">{cid}</div>
-                    <div class="rca-material">Material · {material}</div>
-                </div>
-                <div class="rca-case-right">
-                    <span class="rca-severity {sev_tone}">{severity}</span>
-                    <span class="rca-impact">Impact <b>{impact}/100</b></span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"<div class='ai rca-finding'><div class='ai-label'>Root cause</div>{case.get('root_cause','No root-cause explanation available.')}</div>", unsafe_allow_html=True)
 
         signals = case.get("signals", [])
         if isinstance(signals, (list, tuple)):
-            signals = [str(x).strip() for x in signals if str(x).strip()]
+            signals = [str(x) for x in signals if str(x).strip()]
         elif str(signals).strip():
-            signals = [str(signals).strip()]
+            signals = [str(signals)]
         else:
             signals = []
 
-        left, right = st.columns([1.55, 1], gap="medium")
+        if signals:
+            st.markdown("**Key evidence**")
+            for signal in signals[:4]:
+                st.markdown(f"• {signal}")
 
-        with left:
-            st.markdown(
-                f"""
-                <div class="rca-panel rca-cause">
-                    <div class="rca-panel-head">
-                        <span class="rca-panel-icon">🧠</span>
-                        <div>
-                            <div class="rca-panel-kicker">EXPLAIN</div>
-                            <div class="rca-panel-title">Root cause</div>
-                        </div>
-                    </div>
-                    <div class="rca-cause-copy">
-                        {case.get("root_cause","No root-cause explanation available.")}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        st.markdown("**Recommended action**")
+        st.markdown(f"<div class='good compact-action'>{case.get('recommended_action','Review the linked records before corrective action.')}</div>", unsafe_allow_html=True)
 
-            st.markdown(
-                """
-                <div class="rca-panel rca-evidence">
-                    <div class="rca-panel-head">
-                        <span class="rca-panel-icon">🔎</span>
-                        <div>
-                            <div class="rca-panel-kicker">EVIDENCE</div>
-                            <div class="rca-panel-title">Key evidence signals</div>
-                        </div>
-                    </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            if signals:
-                st.markdown(
-                    "".join(
-                        f"<div class='rca-evidence-row'><span class='rca-check'>✓</span><span>{signal}</span></div>"
-                        for signal in signals[:6]
-                    ) + "</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    "<div class='rca-muted'>No evidence signals recorded.</div></div>",
-                    unsafe_allow_html=True,
-                )
-
-        with right:
-            st.markdown(
-                f"""
-                <div class="rca-panel rca-action">
-                    <div class="rca-panel-head">
-                        <span class="rca-panel-icon">✅</span>
-                        <div>
-                            <div class="rca-panel-kicker">DECIDE</div>
-                            <div class="rca-panel-title">Recommended action</div>
-                        </div>
-                    </div>
-                    <div class="rca-action-copy">
-                        {case.get("recommended_action","Review the linked records before corrective action.")}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            st.markdown(
-                f"""
-                <div class="rca-panel rca-impact-panel">
-                    <div class="rca-panel-head">
-                        <span class="rca-panel-icon">📊</span>
-                        <div>
-                            <div class="rca-panel-kicker">IMPACT</div>
-                            <div class="rca-panel-title">Decision context</div>
-                        </div>
-                    </div>
-                    <div class="rca-impact-score">{impact}<span>/100</span></div>
-                    <div class="rca-impact-track">
-                        <div class="rca-impact-fill" style="width:{max(0,min(100,impact))}%"></div>
-                    </div>
-                    <div class="rca-impact-note">Higher score means greater operational attention.</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        st.markdown(
-            """
-            <div class="rca-ai-box">
-                <div>
-                    <div class="rca-ai-kicker">GENERATIVE EXPLANATION</div>
-                    <div class="rca-ai-title">Create an AI decision brief</div>
-                    <div class="rca-ai-copy">The model summarizes the evidence into a concise explanation. Workbook evidence remains available as the fallback.</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}", use_container_width=True):
+        if st.button("Generate AI explanation", type="primary", key=f"generate_rca_{cid}"):
             with st.spinner("AI is synthesizing the case evidence..."):
-                try:
-                    st.session_state.ai_cache[cid] = generate_root_cause(case)
-                    st.session_state.ai_error = None
-                except Exception:
-                    st.session_state.ai_cache[cid] = (
-                        f"**Evidence-grounded explanation:** "
-                        f"{case.get('root_cause', 'No root-cause explanation is available for this case.')}"
-                    )
-                    st.session_state.ai_error = (
-                        "AI explanation is temporarily unavailable. Showing the workbook-backed explanation instead."
-                    )
-
-        if st.session_state.get("ai_error"):
-            st.warning(st.session_state.ai_error)
-
+                st.session_state.ai_cache[cid] = generate_root_cause(case)
         if cid in st.session_state.ai_cache:
-            st.markdown(
-                f"""
-                <div class="rca-ai-output">
-                    <div class="rca-ai-kicker">AI EXPLANATION</div>
-                    <div class="rca-ai-output-copy">{st.session_state.ai_cache[cid]}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown(st.session_state.ai_cache[cid])
 
         evidence = case.get("evidence", {}) or {}
         nonempty_evidence = [(sheet, records) for sheet, records in evidence.items() if records]
         if nonempty_evidence:
-            total_rows = sum(len(records) for _, records in nonempty_evidence)
-            with st.expander(f"Supporting records · {total_rows} linked rows"):
+            with st.expander(f"Supporting records · {sum(len(records) for _, records in nonempty_evidence)} linked rows"):
                 for sheet, records in nonempty_evidence:
                     st.markdown(f"**{sheet}** · {len(records)} rows")
                     st.dataframe(pd.DataFrame(records), width="stretch", hide_index=True)
