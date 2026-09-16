@@ -284,35 +284,7 @@ h1,h2,h3,h4 {{ color:#153d66 !important; }}
 .rca-ai-title {{ color:#183f67; font-size:.95rem; font-weight:850; margin-top:2px; }}
 .rca-ai-copy {{ color:#73859a; font-size:.72rem; margin-top:4px; line-height:1.35; }}
 .ai-output-title {{ margin:10px 0 5px; display:none; }}
-.ai-brief-header {{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding-bottom:13px; margin-bottom:4px; border-bottom:1px solid rgba(206,220,235,.9); }}
-/* Dedicated background for the single RCA decision brief. */
-div[data-testid="stVerticalBlockBorderWrapper"] {{
-    position:relative;
-    overflow:hidden;
-    border:1px solid rgba(116,72,198,.24) !important;
-    border-radius:20px !important;
-    background:
-        radial-gradient(circle at 92% 8%, rgba(116,72,198,.10), transparent 24%),
-        radial-gradient(circle at 8% 94%, rgba(31,112,184,.08), transparent 28%),
-        linear-gradient(135deg, rgba(255,255,255,.985), rgba(244,248,253,.965)) !important;
-    box-shadow:0 14px 34px rgba(18,54,95,.12), inset 0 1px 0 rgba(255,255,255,.95) !important;
-}}
-div[data-testid="stVerticalBlockBorderWrapper"]::before {{
-    content:"AI";
-    position:absolute;
-    right:-18px;
-    top:-42px;
-    font-size:9.5rem;
-    line-height:1;
-    font-weight:900;
-    letter-spacing:-.08em;
-    color:rgba(116,72,198,.035);
-    pointer-events:none;
-}}
-div[data-testid="stVerticalBlockBorderWrapper"] > div {{
-    position:relative;
-    z-index:1;
-}}
+.ai-brief-header {{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding-bottom:13px; margin-bottom:4px; border-bottom:1px solid #e4eaf1; }}
 .ai-brief-kicker {{ color:#7044c5; font-size:.64rem; font-weight:900; letter-spacing:.10em; }}
 .ai-brief-heading {{ color:#173f67; font-size:1.04rem; font-weight:850; margin-top:4px; }}
 .ai-live-pill {{ flex:0 0 auto; color:#197a59; background:#ecf8f2; border:1px solid #cfeade; border-radius:999px; padding:5px 9px; font-size:.64rem; font-weight:900; letter-spacing:.05em; }}
