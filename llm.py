@@ -40,19 +40,87 @@ Rules:
 
 
 def enabled():
-    return bool(_secret("OPENAI_API_KEY"))
+    """Return True when all VW Group LLMaaS credentials are configured."""
+    return all(
+        bool(_secret(name))
+        for name in ("VW_IDP_CLIENT_ID", "VW_IDP_CLIENT_SECRET", "LLM_API_CLIENT_ID")
+    )
+
+
+def get_token() -> str:
+    """Get a temporary VW Group IDP access token using client credentials."""
+    import httpx
+
+    client_id = _secret("VW_IDP_CLIENT_ID")
+    client_secret = _secret("VW_IDP_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "Missing VW_IDP_CLIENT_ID or VW_IDP_CLIENT_SECRET in Streamlit Secrets."
+        )
+
+    url = _secret(
+        "VW_IDP_TOKEN_URL",
+        "https://idp.cloud.vwgroup.com/auth/realms/kums-mfa/protocol/openid-connect/token",
+    )
+    response = httpx.post(
+        url,
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "client_credentials",
+        },
+        timeout=30.0,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    token = payload.get("access_token")
+    if not token:
+        raise RuntimeError("VW Group IDP token response did not contain access_token.")
+    return token
 
 
 def _client():
+    """Create the verified VW Group LLMaaS OpenAI-compatible client."""
     from openai import OpenAI
-    return OpenAI(api_key=_secret("OPENAI_API_KEY"))
+
+    token = get_token()
+    key = _secret("LLM_API_CLIENT_ID")
+    base_url = _secret("LLM_API_BASE_URL", "https://llmapi.ai.vwgroup.com")
+
+    return OpenAI(
+        api_key=token,
+        base_url=base_url,
+        default_headers={"X-LLM-API-CLIENT-ID": f"Bearer {key}"},
+    )
+
+
+def _chat(client, model: str, system_prompt: str, user_prompt: str) -> str:
+    """Call the VW Group LLMaaS endpoint using the chat-completions interface."""
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        stream=False,
+        temperature=0.0,
+    )
+    content = response.choices[0].message.content if response.choices else None
+    if not content:
+        raise RuntimeError("VW Group LLMaaS returned an empty response.")
+    return content.strip()
 
 
 def generate_root_cause(case: dict, model: str | None = None) -> str:
+    # RCA must be genuinely AI-generated. Never silently display the deterministic
+    # case text when the VW Group LLMaaS connection is unavailable.
     if not enabled():
-        return fallback_root_cause(case)
+        raise RuntimeError(
+            "VW Group LLMaaS is not configured. Add VW_IDP_CLIENT_ID, "
+            "VW_IDP_CLIENT_SECRET, and LLM_API_CLIENT_ID to Streamlit Secrets."
+        )
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+    model = model or _secret("OPENAI_MODEL", "gpt-4o")
     client = _client()
 
     prompt = f"""
@@ -83,14 +151,7 @@ Write exactly these sections:
 
 In Evidence Chain, explicitly name the source sheet and the exact record/field values supporting each important conclusion.
 """
-
-    response = client.responses.create(
-        model=model,
-        instructions=SYSTEM_PROMPT,
-        input=prompt
-    )
-
-    return response.output_text.strip()
+    return _chat(client, model, SYSTEM_PROMPT, prompt)
 
 
 def _load_copilot_workbook():
@@ -151,7 +212,7 @@ def copilot_answer(question: str, case: dict | None = None, model: str | None = 
             pass
         return fallback_copilot(question, case)
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+    model = model or _secret("OPENAI_MODEL", "gpt-4o")
     client = _client()
 
     workbook_records = {
@@ -220,12 +281,7 @@ ALL Inventory_Stock rows using Batch Expiry relative to the 2026-09-05 snapshot.
 Do not answer from a selected material such as MAT-100056.
 """
 
-    response = client.responses.create(
-        model=model,
-        instructions=SYSTEM_PROMPT,
-        input=prompt,
-    )
-    return response.output_text.strip()
+    return _chat(client, model, SYSTEM_PROMPT, prompt)
 
 
 # -------------------------------------------------------------------
@@ -611,7 +667,7 @@ def copilot_workbook_answer(question: str, dq, anomalies, data, model: str | Non
 
             return "\n".join(lines)
 
-        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+        model = model or _secret("OPENAI_MODEL", "gpt-4o")
         client = _client()
 
         prompt = f"""
@@ -642,13 +698,7 @@ Give a practical review/remediation proposal. Do not claim execution.
 
 Do not invent any information.
 """
-
-        response = client.responses.create(
-            model=model,
-            instructions=SYSTEM_PROMPT,
-            input=prompt
-        )
-        return response.output_text.strip()
+        return _chat(client, model, SYSTEM_PROMPT, prompt)
 
     # ---------------------------------------------------------------
     # 2. Field-level question: "Base UoM", "base uom", "BASE UOM"
@@ -688,7 +738,7 @@ Do not invent any information.
 
             return "\n".join(lines)
 
-        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+        model = model or _secret("OPENAI_MODEL", "gpt-4o")
         client = _client()
 
         prompt = f"""
@@ -715,13 +765,7 @@ Show:
 Keep exact issue IDs, records and actual values.
 Do not invent missing records.
 """
-
-        response = client.responses.create(
-            model=model,
-            instructions=SYSTEM_PROMPT,
-            input=prompt
-        )
-        return response.output_text.strip()
+        return _chat(client, model, SYSTEM_PROMPT, prompt)
 
     # ---------------------------------------------------------------
     # 3. Material/entity investigation
@@ -796,7 +840,7 @@ Do not invent missing records.
 
             return "\n".join(lines)
 
-        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+        model = model or _secret("OPENAI_MODEL", "gpt-4o")
         client = _client()
 
         prompt = f"""
@@ -816,13 +860,7 @@ If they ask what to do, provide a recommendation based on the evidence.
 Use exact values and IDs.
 Do not invent information.
 """
-
-        response = client.responses.create(
-            model=model,
-            instructions=SYSTEM_PROMPT,
-            input=prompt
-        )
-        return response.output_text.strip()
+        return _chat(client, model, SYSTEM_PROMPT, prompt)
 
     # ---------------------------------------------------------------
     # 4. Broad workbook question
@@ -983,7 +1021,7 @@ Do not invent information.
             "The OpenAI connection is currently unavailable, so I cannot generate the full natural-language answer for this question yet."
         )
 
-    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+    model = model or _secret("OPENAI_MODEL", "gpt-4o")
     client = _client()
 
     prompt = f"""
@@ -1014,14 +1052,7 @@ Rules:
 - If the workbook does not contain enough evidence, say exactly what is missing.
 - Keep the answer concise but useful, with a small table/list when that makes the answer clearer.
 """
-
-    response = client.responses.create(
-        model=model,
-        instructions=SYSTEM_PROMPT,
-        input=prompt
-    )
-
-    return response.output_text.strip()
+    return _chat(client, model, SYSTEM_PROMPT, prompt)
 
 
 # -------------------------------------------------------------------
