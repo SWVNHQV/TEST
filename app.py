@@ -283,7 +283,21 @@ h1,h2,h3,h4 {{ color:#153d66 !important; }}
 .rca-ai-kicker,.ai-output-title {{ color:#7044c5; font-size:.63rem; font-weight:850; letter-spacing:.09em; }}
 .rca-ai-title {{ color:#183f67; font-size:.95rem; font-weight:850; margin-top:2px; }}
 .rca-ai-copy {{ color:#73859a; font-size:.72rem; margin-top:4px; line-height:1.35; }}
-.ai-output-title {{ margin:10px 0 5px; }}
+.ai-output-title {{ margin:10px 0 5px; display:none; }}
+.ai-brief-header {{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding-bottom:13px; margin-bottom:4px; border-bottom:1px solid #e4eaf1; }}
+.ai-brief-kicker {{ color:#7044c5; font-size:.64rem; font-weight:900; letter-spacing:.10em; }}
+.ai-brief-heading {{ color:#173f67; font-size:1.04rem; font-weight:850; margin-top:4px; }}
+.ai-live-pill {{ flex:0 0 auto; color:#197a59; background:#ecf8f2; border:1px solid #cfeade; border-radius:999px; padding:5px 9px; font-size:.64rem; font-weight:900; letter-spacing:.05em; }}
+.ai-section {{ margin-top:15px; }}
+.ai-section-title {{ display:flex; align-items:center; gap:8px; color:#173f67; font-size:.84rem; font-weight:900; letter-spacing:.02em; margin-bottom:5px; }}
+.ai-section-icon {{ width:25px; height:25px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; background:#eef4fa; font-size:13px; }}
+.ai-section.cause .ai-section-icon {{ background:#f1ecfb; }}
+.ai-section.factors .ai-section-icon {{ background:#eef6fb; }}
+.ai-section.impact .ai-section-icon {{ background:#fff5e5; }}
+.ai-section.action .ai-section-icon {{ background:#ebf8f2; }}
+.ai-section.confidence .ai-section-icon {{ background:#f1f4f8; }}
+.ai-brief-header + div p {{ margin-top:0.2rem; }}
+
 .ai-brief-title-row {{ display:flex; align-items:center; gap:8px; margin:9px 0 2px; padding:7px 10px; border-radius:9px; background:rgba(255,255,255,.90); border:1px solid #dce5ed; color:#183d64; font-size:.79rem; font-weight:850; }}
 .ai-brief-title-row.cause {{ border-left:4px solid #7448c6; }}
 .ai-brief-title-row.factors {{ border-left:4px solid #2f73b7; }}
@@ -579,54 +593,110 @@ def clean_ai_text(raw_text: str) -> str:
 
 
 def render_rca_ai_output(raw_text: str) -> None:
+    """Render one consolidated, normalized AI decision brief.
+
+    The LLM may use slightly different heading names. Normalize them into
+    exactly one occurrence of each business section so the RCA is never
+    duplicated on the page.
+    """
     text = clean_ai_text(raw_text)
     if not text:
         st.info("No AI explanation was returned.")
         return
 
-    sections = {}
-    current = None
-    buffer = []
+    aliases = {
+        "primary root cause": "Primary Root Cause",
+        "root cause": "Primary Root Cause",
+        "contributing factors": "Contributing Factors",
+        "evidence": "Contributing Factors",
+        "evidence chain": "Contributing Factors",
+        "operational impact": "Operational Impact",
+        "business impact": "Operational Impact",
+        "recommended action": "Recommended Action",
+        "recommended actions": "Recommended Action",
+        "confidence": "Confidence",
+    }
+
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    buffer: list[str] = []
+
+    def flush() -> None:
+        nonlocal buffer, current
+        if current:
+            body = "\n".join(buffer).strip()
+            if body:
+                sections.setdefault(current, []).append(body)
+        buffer = []
+
     for line in text.splitlines():
-        match = re.match(r"^\s*#{2,3}\s*(.+?)\s*$", line)
+        match = re.match(r"^\s*#{2,4}\s*(.+?)\s*$", line)
         if match:
-            if current:
-                sections[current] = "\n".join(buffer).strip()
-            current = match.group(1).strip()
-            buffer = []
+            flush()
+            raw_title = re.sub(r"[*_`]+", "", match.group(1)).strip().rstrip(":")
+            current = aliases.get(raw_title.lower())
+            if current is None:
+                current = raw_title.title()
         elif current:
             buffer.append(line)
-    if current:
-        sections[current] = "\n".join(buffer).strip()
 
-    section_map = [
+    flush()
+
+    # Some responses are plain text without markdown headings. Keep the full
+    # model response inside the single decision brief rather than inventing
+    # missing sections.
+    if not sections:
+        sections = {"AI Explanation": [text]}
+
+    section_order = [
         ("Primary Root Cause", "cause", "🧠"),
-        ("Root Cause", "cause", "🧠"),
         ("Contributing Factors", "factors", "🔎"),
-        ("Evidence", "factors", "🔎"),
-        ("Evidence Chain", "factors", "🔎"),
         ("Operational Impact", "impact", "📊"),
-        ("Business Impact", "impact", "📊"),
         ("Recommended Action", "action", "✅"),
         ("Confidence", "confidence", "✓"),
+        ("AI Explanation", "general", "✨"),
     ]
 
-    seen = set()
-    rendered = False
-    for title, tone, icon in section_map:
-        if title in seen or title not in sections:
-            continue
-        seen.add(title)
-        body = sections[title]
-        rendered = True
+    with st.container(border=True):
         st.markdown(
-            f"<div class='ai-brief-title-row {tone}'><span class='ai-brief-icon'>{icon}</span><span>{title}</span></div>",
+            "<div class='ai-brief-header'>"
+            "<div><div class='ai-brief-kicker'>LIVE AI-GENERATED DECISION BRIEF</div>"
+            "<div class='ai-brief-heading'>Case explanation generated from linked evidence</div></div>"
+            "<div class='ai-live-pill'>● LIVE</div>"
+            "</div>",
             unsafe_allow_html=True,
         )
-        st.markdown(body)
 
-    if not rendered:
-        st.markdown(text)
+        rendered = set()
+        for title, tone, icon in section_order:
+            if title not in sections or title in rendered:
+                continue
+            rendered.add(title)
+            body = "\n\n".join(x for x in sections[title] if x).strip()
+            st.markdown(
+                f"<div class='ai-section {tone}'>"
+                f"<div class='ai-section-title'><span class='ai-section-icon'>{icon}</span>{title}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(body)
+
+        # Preserve any additional model section once, without duplicating the
+        # canonical business sections above.
+        for title, bodies in sections.items():
+            if title in rendered:
+                continue
+            body = "\n\n".join(x for x in bodies if x).strip()
+            if not body:
+                continue
+            rendered.add(title)
+            st.markdown(
+                f"<div class='ai-section general'>"
+                f"<div class='ai-section-title'><span class='ai-section-icon'>•</span>{title}</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(body)
 
 
 # -----------------------------------------------------------------------------
@@ -936,6 +1006,10 @@ elif st.session_state.active_workspace == "Root Cause AI":
         )
         case = cases.iloc[idx].to_dict()
         cid = str(case.get("case_id", ""))
+        previous_case = st.session_state.get("rca_selected_case_id")
+        if previous_case != cid:
+            st.session_state.rca_selected_case_id = cid
+            st.session_state.ai_error = None
         material = str(case.get("material", ""))
         severity = str(case.get("severity", "Unknown")).title()
         impact = int(case.get("impact_score", 0) or 0)
@@ -1033,8 +1107,8 @@ elif st.session_state.active_workspace == "Root Cause AI":
             """
             <div class="rca-ai-box">
                 <div class="rca-ai-kicker">GENERATIVE ANALYSIS</div>
-                <div class="rca-ai-title">Generate the case explanation</div>
-                <div class="rca-ai-copy">The deterministic case text is intentionally hidden here. This section is populated only by the live VW Group LLMaaS response.</div>
+                <div class="rca-ai-title">Generate one evidence-grounded decision brief</div>
+                <div class="rca-ai-copy">The RCA below is rendered only from the live VW Group LLMaaS response. No deterministic case finding is shown as the RCA.</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1062,10 +1136,6 @@ elif st.session_state.active_workspace == "Root Cause AI":
             )
 
         if cid in st.session_state.ai_cache:
-            st.markdown(
-                "<div class='ai-output-title'>LIVE AI-GENERATED DECISION BRIEF</div>",
-                unsafe_allow_html=True,
-            )
             render_rca_ai_output(st.session_state.ai_cache[cid])
         else:
             st.markdown(
