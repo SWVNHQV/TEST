@@ -496,11 +496,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown(
-    "<div class='page-kicker'>WORKSPACE</div>"
-    "<div class='page-hint'>Choose a workspace from the sidebar to investigate, explain, trace, approve, or inspect records.</div>",
-    unsafe_allow_html=True,
-)
 
 with st.sidebar:
     st.markdown(
@@ -529,6 +524,7 @@ with st.sidebar:
         "Workspace",
         nav_options,
         index=0,
+        key="workspace_navigation",
         label_visibility="collapsed",
     )
 
@@ -547,6 +543,12 @@ with st.sidebar:
 
     st.markdown("<div class='sidebar-section-title'>GOVERNANCE</div>", unsafe_allow_html=True)
     st.caption("Human approval required · Simulated actions · Audit retained")
+
+
+st.markdown(
+    f"<div class='page-kicker'>WORKSPACE / {str(selected_nav).replace('🏠','').replace('🔎','').replace('⚙️','').replace('🧠','').replace('🧩','').replace('🔗','').replace('✅','').replace('💬','').replace('🗄️','').replace('🧾','').strip()}</div>",
+    unsafe_allow_html=True,
+)
 
 try:
     raw=load_workbook(path)
@@ -678,7 +680,7 @@ def build_finding_context(finding, data, dq, anomalies):
 # Navigation is rendered directly below the hero for immediate visibility.
 
 
-if selected_nav == '🏠  Overview':
+if 'Overview' in str(selected_nav):
     st.markdown("<div class='section-title'>Operations overview</div>", unsafe_allow_html=True)
     st.markdown(
         "<div class='section-subtitle'>Start with the warehouse health picture, then move into the investigation workflow.</div>",
@@ -797,7 +799,7 @@ if selected_nav == '🏠  Overview':
         "Use Data Explorer when you need the underlying workbook records."
     )
 
-if selected_nav == '🔎  Data Quality':
+if 'Data Quality' in str(selected_nav):
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker'>FINDINGS</div>"
@@ -917,7 +919,7 @@ if selected_nav == '🔎  Data Quality':
             ))
 
 
-if selected_nav == '⚙️  Inventory & Process':
+if 'Inventory & Process' in str(selected_nav):
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker process-kicker'>OPERATIONS</div>"
@@ -1021,7 +1023,7 @@ if selected_nav == '⚙️  Inventory & Process':
             use_container_width=False,
         )
 
-if selected_nav == '🧠  Correlated Cases':
+if 'Correlated Cases' in str(selected_nav):
     st.markdown(
         "<div class='findings-header'><div>"
         "<div class='findings-kicker rca-kicker'>OPERATIONS</div>"
@@ -1181,7 +1183,7 @@ if selected_nav == '🧠  Root Cause AI':
                     st.markdown(f"**{sheet}** · {len(records)} rows")
                     st.dataframe(pd.DataFrame(records), width="stretch", hide_index=True)
 
-if selected_nav == '🔗  Trace Graph':
+if 'Trace Graph' in str(selected_nav):
     st.subheader("Relationship trace")
     st.caption("Follow one material across the six operational sheets. Relationships are built from workbook keys.")
     if cases.empty:
@@ -1221,7 +1223,7 @@ if selected_nav == '🔗  Trace Graph':
             with st.expander(f"{title} · {len(df)} linked rows"):
                 st.dataframe(df[cols],width="stretch",hide_index=True)
 
-if selected_nav == '✅  Approvals':
+if 'Approvals' in str(selected_nav):
     st.subheader("Human approval gate")
     st.caption("The Action Agent proposes. A human decides. The app only simulates execution.")
     if cases.empty: st.info("No actions.")
@@ -1257,7 +1259,7 @@ if selected_nav == '✅  Approvals':
                 st.rerun()
             st.write(f"**Current status:** {state['status']}")
 
-if selected_nav == '💬  Copilot':
+if 'Copilot' in str(selected_nav):
     st.subheader("Warehouse Copilot")
     st.caption("Ask about any finding, material, delivery, PO, vendor, or workbook-wide issue.")
     q=st.text_input(
@@ -1379,15 +1381,25 @@ if selected_nav == '💬  Copilot':
                     with st.spinner("Checking the entire workbook..."):
                         st.markdown(copilot_workbook_answer(q, dq, anomalies, data))
 
-if selected_nav == '🗄️  Data Explorer':
+if 'Data Explorer' in str(selected_nav):
     st.subheader("Data Explorer")
     visible_sheets=[s for s in data.keys() if s not in {"README","Data_Dictionary"}]
     sheet=st.selectbox("Sheet",visible_sheets)
     st.dataframe(data[sheet],width="stretch",hide_index=True)
 
-if selected_nav == '🧾  Audit':
+if 'Audit' in str(selected_nav):
     st.subheader("Audit trail")
     if st.session_state.audit:
         st.dataframe(pd.DataFrame(st.session_state.audit),width="stretch",hide_index=True)
     else:
         st.info("No human decisions recorded in this session.")
+
+
+# Defensive fallback: never leave the main canvas empty if a future nav label
+# is changed without updating the router.
+known_pages = [
+    "Overview", "Data Quality", "Inventory & Process", "Correlated Cases",
+    "Root Cause AI", "Trace Graph", "Approvals", "Copilot", "Data Explorer", "Audit"
+]
+if not any(p in str(selected_nav) for p in known_pages):
+    st.info("Select a workspace from the sidebar to continue.")
