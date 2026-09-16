@@ -197,6 +197,15 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] input{
 
 
 
+
+.subsection-title{
+    margin:15px 0 8px;
+    color:#173f67;
+    font-size:.84rem;
+    font-weight:850;
+    letter-spacing:.04em;
+}
+
 /* ===== Operations summary cards ===== */
 .ops-summary-card{
     position:relative;
@@ -662,6 +671,30 @@ if selected_nav == '🏠  Overview':
                 unsafe_allow_html=True,
             )
 
+    st.markdown('<div class="subsection-title">Investigation status</div>', unsafe_allow_html=True)
+    overview_status = [
+        ("dq", "Data quality", len(dq), "Findings requiring review", "01"),
+        ("process", "Process anomalies", len(anomalies), "Operational exceptions", "02"),
+        ("rca", "Root-cause cases", len(cases), "Correlated investigations", "03"),
+        ("approval", "Pending approval", pending, "Awaiting human decision", "04"),
+    ]
+    status_cols = st.columns(4)
+    for col, (tone, title, value, subtitle, step) in zip(status_cols, overview_status):
+        with col:
+            st.markdown(
+                f"""
+                <div class="ops-summary-card {tone}">
+                    <div class="ops-summary-top">
+                        <span class="ops-summary-step">{step}</span>
+                        <span class="ops-summary-title">{title}</span>
+                    </div>
+                    <div class="ops-summary-value">{value:,}</div>
+                    <div class="ops-summary-subtitle">{subtitle}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     priority_items = []
     if critical_count:
@@ -730,36 +763,6 @@ if selected_nav == '🏠  Overview':
 if selected_nav == '📊  Operations':
     st.subheader("Prioritized operational worklist")
     st.caption("Start here: review Critical/High findings, open Root Cause AI, then approve the proposed fix.")
-
-    # Four primary operational signals for rapid triage.
-    pending = sum(
-        1 for _, _case in cases.iterrows()
-        if st.session_state.actions.get(str(_case.get("case_id", "")).strip(), {}).get("status") == "Pending"
-    ) if cases is not None and not cases.empty else 0
-
-    ops_metrics = [
-        ("dq", "Data quality", len(dq), "Data-quality findings", "01"),
-        ("process", "Process anomalies", len(anomalies), "Operational exceptions", "02"),
-        ("rca", "Root-cause cases", len(cases), "Correlated investigations", "03"),
-        ("approval", "Pending approval", pending, "Awaiting human decision", "04"),
-    ]
-
-    metric_cols = st.columns(4)
-    for col, (tone, title, value, subtitle, step) in zip(metric_cols, ops_metrics):
-        with col:
-            st.markdown(
-                f"""
-                <div class="ops-summary-card {tone}">
-                    <div class="ops-summary-top">
-                        <span class="ops-summary-step">{step}</span>
-                        <span class="ops-summary-title">{title}</span>
-                    </div>
-                    <div class="ops-summary-value">{value:,}</div>
-                    <div class="ops-summary-subtitle">{subtitle}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
 
     st.markdown(
         "<div class='findings-header'><div>"
