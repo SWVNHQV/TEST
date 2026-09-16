@@ -66,14 +66,7 @@ def get_token() -> str:
         },
         timeout=30.0,
     )
-    try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        status = exc.response.status_code
-        raise RuntimeError(
-            f"VW IDP token request failed with HTTP {status}. "
-            "Verify the VW IDP client credentials and that the client is authorized."
-        ) from None
+    response.raise_for_status()
 
     token_data = response.json()
     access_token = token_data.get("access_token")
@@ -146,39 +139,64 @@ def _llm_complete(
 
 
 def generate_root_cause(case: dict, model: str | None = None) -> str:
+    """Generate a concise, evidence-grounded RCA decision brief for the selected case."""
     if not enabled():
         return fallback_root_cause(case)
 
     model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+
     prompt = f"""
-Analyze this correlated warehouse case as a senior warehouse root-cause analyst.
+Act as a senior warehouse root-cause analyst.
 
-The JSON contains both deterministic calculations and the underlying connected workbook records.
-The six source sheets in `evidence` are the source of truth: Material_Master, Inventory_Stock,
-Warehouse_Bin, Deliveries_Dispatch, Purchase_Replenish, and Vendor_Master.
+Your job is to transform the supplied correlated case into a concise decision brief for a
+warehouse operator. The workbook evidence is the source of truth.
 
+CASE DATA:
 {json.dumps(case, indent=2, default=str)}
 
-Reasoning requirements:
-1. Read the connected records across all available sheets before forming the root cause.
-2. Reconcile the material, plant, vendor, delivery, PO and inventory relationships using only supplied keys.
-3. Use deterministic metrics for arithmetic, but verify the meaning against the underlying records.
-4. Do not simply repeat `root_cause`; independently explain why the evidence supports that conclusion.
-5. Identify the primary root cause first, then contributing factors, then symptoms.
-6. Never invent a record. If a sheet has zero linked records, say that it has no linked evidence.
-7. Preserve exact IDs, quantities, dates, statuses, field names and values.
-8. For inventory, distinguish physical on-hand, blocked quantity, usable available quantity, inbound quantity and shortage.
+ANALYSIS RULES
+1. Use ONLY the supplied case data and linked workbook records.
+2. Reconcile the relationships across Material_Master, Inventory_Stock, Warehouse_Bin,
+   Deliveries_Dispatch, Purchase_Replenish, and Vendor_Master only when the supplied keys support them.
+3. Preserve exact IDs, quantities, dates, statuses, and field values.
+4. Distinguish:
+   - confirmed facts directly observed in records,
+   - deterministic calculations,
+   - the inferred primary root cause,
+   - contributing factors and symptoms.
+5. Do not invent missing data.
+6. Do not repeat the same evidence in multiple sections.
+7. For inventory, clearly distinguish physical on-hand, blocked quantity, usable available quantity,
+   inbound quantity, demand, and shortage.
+8. Recommendations are proposals only. Never claim an action has already been executed.
+9. Keep the language direct, operational, and easy to scan.
+10. Prefer concrete statements such as:
+    "Demand is 235 while usable stock is 0, creating a 235-unit shortage."
+    Do not use vague phrases such as "there appears to be an issue."
 
-Write exactly these sections:
-### Root Cause
-### Evidence Chain
-### Business Impact
+OUTPUT FORMAT
+Return exactly:
+
+### Primary Root Cause
+One concise paragraph of 1–3 sentences. State the main causal chain using the most important
+confirmed values. Do NOT merely copy the existing `root_cause` text; compress and clarify it.
+
+### Evidence
+Use 3–5 bullet points. Each bullet should contain one concrete fact and, when available,
+the source sheet and relevant ID/field.
+
+### Impact
+One concise paragraph containing the most important operational impact, including the supplied
+impact score/severity and the key shortage/delivery/capacity consequence.
+
 ### Recommended Action
+One concise sentence or two short bullets. Actions must be proposed, not described as completed.
+
 ### Confidence
+One sentence: High / Medium / Low, with a brief reason based on evidence coverage.
 
-In Evidence Chain, explicitly name the source sheet and the exact record/field values supporting each important conclusion.
+Do not add any other headings, introduction, conclusion, or disclaimer.
 """
-
     return _llm_complete(prompt=prompt, system_prompt=SYSTEM_PROMPT, model=model)
 
 
@@ -1102,22 +1120,34 @@ Rules:
 # -------------------------------------------------------------------
 
 def fallback_root_cause(case):
-    m = case.get("metrics", {})
+    m = case.get("metrics", {}) or {}
+    severity = case.get("severity", "Unknown")
+    impact = case.get("impact_score", 0)
+    demand = m.get("demand", 0)
+    usable = m.get("usable_available", m.get("available", 0))
+    on_hand = m.get("on_hand", 0)
+    blocked = m.get("blocked", 0)
+    shortage = m.get("shortage", 0)
+    overdue = m.get("overdue_deliveries", 0)
 
-    return f"""### Root Cause
+    return f"""### Primary Root Cause
 {case.get("root_cause", "The correlated evidence indicates a cross-system operational issue.")}
 
-### Evidence Chain
-The case links Material Master, Inventory_Stock, Warehouse_Bin, Deliveries_Dispatch, Purchase_Replenish, and Vendor_Master using the material/plant/vendor relationships present in the workbook.
+### Evidence
+- Inventory: physical on-hand {on_hand:,.0f}, blocked {blocked:,.0f}, usable available {usable:,.0f}.
+- Demand: active demand {demand:,.0f}; calculated shortage {shortage:,.0f}.
+- Deliveries: {overdue} active delivery record(s) are overdue.
+- Cross-system evidence: the case contains linked Material Master, Inventory, Warehouse Bin, Delivery, Purchase Replenishment and Vendor records.
 
-### Business Impact
-Impact score: {case.get("impact_score", 0)}/100 ({case.get("severity", "Unknown")}). Usable available stock: {m.get("usable_available", m.get("available", 0)):,.0f}; physical on-hand: {m.get("on_hand", 0):,.0f}; blocked: {m.get("blocked", 0):,.0f}; active demand: {m.get("demand", 0):,.0f}; shortage: {m.get("shortage", 0):,.0f}; overdue deliveries: {m.get("overdue_deliveries", 0)}.
+### Impact
+{severity} severity with an impact score of {impact}/100. The primary operational effect is insufficient usable stock against demand, with the linked delivery and capacity risks increasing execution exposure.
 
 ### Recommended Action
-{case.get("recommended_action", "Review the linked records and correct the underlying issue.")}
+{case.get("recommended_action", "Review the linked records and correct the underlying issue before execution.")}
 
 ### Confidence
-High for the observed data relationships; narrative generation is using the deterministic evidence summary because no OpenAI API key is configured."""
+High for the supplied deterministic evidence and linked-record relationships; narrative generation is using the evidence-grounded fallback because VW LLMaaS is unavailable.
+"""
 
 
 def fallback_copilot(question, case):
