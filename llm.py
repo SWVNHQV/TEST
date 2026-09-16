@@ -66,7 +66,14 @@ def get_token() -> str:
         },
         timeout=30.0,
     )
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        raise RuntimeError(
+            f"VW IDP token request failed with HTTP {status}. "
+            "Verify the VW IDP client credentials and that the client is authorized."
+        ) from None
 
     token_data = response.json()
     access_token = token_data.get("access_token")
