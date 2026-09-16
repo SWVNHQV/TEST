@@ -1,5 +1,4 @@
 
-
 from __future__ import annotations
 import os, json
 import base64
@@ -194,6 +193,63 @@ section[data-testid="stSidebar"] [data-testid="stRadio"] div[role="radiogroup"] 
 }
 section[data-testid="stSidebar"] [data-testid="stRadio"] input{
     accent-color:#1c74bd !important;
+}
+
+
+/* ===== Findings workspace ===== */
+.findings-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:end;
+    margin:14px 0 8px;
+}
+.findings-kicker{
+    color:#7b4bc4;
+    font-size:.68rem;
+    font-weight:850;
+    letter-spacing:.10em;
+}
+.findings-title{
+    color:#163f6a;
+    font-size:1.28rem;
+    font-weight:850;
+    margin-top:2px;
+}
+.findings-subtitle{
+    color:#71829a;
+    font-size:.82rem;
+    margin-top:3px;
+}
+.finding-severity{
+    position:relative;
+    min-height:82px;
+    padding:13px 15px;
+    border-radius:13px;
+    background:rgba(255,255,255,.96);
+    border:1px solid #d9e3ed;
+    box-shadow:0 4px 12px rgba(22,54,88,.06);
+    overflow:hidden;
+}
+.finding-severity::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0; width:4px;
+}
+.finding-severity.critical::before{background:#d64545;}
+.finding-severity.high::before{background:#e39a20;}
+.finding-severity.medium::before{background:#4679be;}
+.finding-severity.low::before{background:#6e7f92;}
+.finding-severity-label{
+    color:#6d7d92;
+    font-size:.76rem;
+    font-weight:750;
+}
+.finding-severity-value{
+    color:#173b63;
+    font-size:1.65rem;
+    font-weight:850;
+    line-height:1.05;
+    margin-top:6px;
 }
 
 /* Typography / page hierarchy */
@@ -622,20 +678,102 @@ if selected_nav == '📊  Operations':
     ) if cases is not None and not cases.empty else 0
     c4.metric("Pending approval", pending)
 
-    st.markdown("### Data Quality")
+    st.markdown(
+        "<div class='findings-header'><div>"
+        "<div class='findings-kicker'>FINDINGS</div>"
+        "<div class='findings-title'>Data-quality findings</div>"
+        "<div class='findings-subtitle'>Prioritize the records that need investigation, then open one finding for evidence.</div>"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
     if dq.empty:
         st.success("No data-quality findings.")
     else:
-        dq_view = dq[["issue_id","severity","entity","title","detail","evidence"]].copy()
-        dq_view["evidence"] = dq_view["evidence"].apply(evidence_text)
-        dq_view.columns = ["ID","Severity","Record","Issue","Explanation","Actual values"]
-        st.dataframe(dq_view, width="stretch", hide_index=True)
-        st.download_button(
-            "Export data-quality findings",
-            dq.to_csv(index=False).encode("utf-8"),
-            "nexuschain_data_quality_findings.csv",
-            "text/csv"
+        sev = dq["severity"].astype(str).str.strip().str.title()
+        severity_counts = {level: int((sev == level).sum()) for level in ["Critical", "High", "Medium", "Low"]}
+
+        q1, q2, q3, q4 = st.columns(4)
+        severity_cards = [
+            ("Critical", severity_counts["Critical"], "critical"),
+            ("High", severity_counts["High"], "high"),
+            ("Medium", severity_counts["Medium"], "medium"),
+            ("Low", severity_counts["Low"], "low"),
+        ]
+        for col, (label, count, tone) in zip([q1, q2, q3, q4], severity_cards):
+            with col:
+                st.markdown(
+                    f"<div class='finding-severity {tone}'>"
+                    f"<div class='finding-severity-label'>{label}</div>"
+                    f"<div class='finding-severity-value'>{count:,}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+        f1, f2, f3 = st.columns([1.0, 1.0, 1.8])
+        with f1:
+            severity_filter = st.selectbox(
+                "Severity",
+                ["All", "Critical", "High", "Medium", "Low"],
+                key="finding_severity_filter",
+            )
+        with f2:
+            entity_options = ["All"] + sorted(dq["entity"].astype(str).dropna().unique().tolist())
+            entity_filter = st.selectbox(
+                "Record",
+                entity_options,
+                key="finding_entity_filter",
+            )
+        with f3:
+            search_filter = st.text_input(
+                "Search finding",
+                placeholder="ID, issue, record, or explanation",
+                key="finding_search_filter",
+            )
+
+        filtered = dq.copy()
+        if severity_filter != "All":
+            filtered = filtered[filtered["severity"].astype(str).str.title() == severity_filter]
+        if entity_filter != "All":
+            filtered = filtered[filtered["entity"].astype(str) == entity_filter]
+        if search_filter.strip():
+            q = search_filter.strip().lower()
+            mask = (
+                filtered["issue_id"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered["entity"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered["title"].astype(str).str.lower().str.contains(q, na=False)
+                | filtered["detail"].astype(str).str.lower().str.contains(q, na=False)
+            )
+            filtered = filtered[mask]
+
+        st.caption(f"Showing {len(filtered):,} of {len(dq):,} data-quality findings")
+
+        preview = filtered[["issue_id", "severity", "entity", "title", "detail"]].copy()
+        preview.columns = ["ID", "Severity", "Record", "Issue", "Explanation"]
+        preview["Explanation"] = preview["Explanation"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 145)
+        st.dataframe(
+            preview,
+            width="stretch",
+            hide_index=True,
+            height=330,
+            column_config={
+                "ID": st.column_config.TextColumn("ID", width="small"),
+                "Severity": st.column_config.TextColumn("Severity", width="small"),
+                "Record": st.column_config.TextColumn("Record", width="medium"),
+                "Issue": st.column_config.TextColumn("Issue", width="medium"),
+                "Explanation": st.column_config.TextColumn("Explanation", width="large"),
+            },
         )
+
+        e1, e2 = st.columns([1, 4])
+        with e1:
+            st.download_button(
+                "Export findings",
+                filtered.to_csv(index=False).encode("utf-8"),
+                "intelliwarehouse_data_quality_findings.csv",
+                "text/csv",
+                use_container_width=True,
+            )
 
     st.markdown("### Explain a Data Quality Finding")
     dq_ids = dq["issue_id"].astype(str).tolist()
