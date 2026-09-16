@@ -12,6 +12,7 @@ import streamlit as st
 from agents import SNAPSHOT_DATE, load_workbook, run_pipeline
 from llm import (
     copilot_answer,
+    explain_finding,
     copilot_workbook_answer,
     enabled,
     generate_root_cause,
@@ -972,7 +973,7 @@ elif st.session_state.active_workspace == "Data Quality":
             context = build_finding_context(row)
             with st.spinner("Copilot is checking the exact finding and connected records..."):
                 try:
-                    st.markdown(copilot_answer(f"Explain {choice} in detail. Start with the exact finding, direct evidence, why it matters, related risks, and safest next step.", context))
+                    st.markdown(explain_finding(context))
                 except Exception as exc:
                     st.error(f"Copilot error: {exc}")
 
