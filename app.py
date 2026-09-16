@@ -331,7 +331,7 @@ h1,h2,h3,h4 {{ color:#153d66 !important; }}
 
 /* Opaque surfaces for readable AI Copilot and approval content over the warehouse background. */
 .st-key-copilot-surface,
-[class*="st-key-approval-card-"] {
+[class*="st-key-approval-card-"] {{
     background:#ffffff !important;
     background-color:#ffffff !important;
     border:1px solid #cbd8e5 !important;
@@ -339,17 +339,17 @@ h1,h2,h3,h4 {{ color:#153d66 !important; }}
     box-shadow:0 10px 28px rgba(24,63,103,.12) !important;
     padding:18px 20px !important;
     opacity:1 !important;
-}
+}}
 .st-key-copilot-surface * ,
-[class*="st-key-approval-card-"] * {
+[class*="st-key-approval-card-"] * {{
     opacity:1 !important;
-}
+}}
 .st-key-copilot-surface [data-testid="stMarkdownContainer"],
 [class*="st-key-approval-card-"] [data-testid="stMarkdownContainer"],
 [class*="st-key-approval-card-"] label,
-[class*="st-key-approval-card-"] p {
+[class*="st-key-approval-card-"] p {{
     color:#243b55 !important;
-}
+}}
 .ai-decision-brief-surface .ai-section-body p {{ margin:.15rem 0 .65rem; }}
 .ai-decision-brief-surface .ai-section-body ul,
 .ai-decision-brief-surface .ai-section-body ol {{ margin:.25rem 0 .3rem 1.2rem; padding-left:1.05rem; }}
