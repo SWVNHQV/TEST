@@ -1,1209 +1,1213 @@
 from __future__ import annotations
 
-import json
 import os
+import json
 import re
-from datetime import datetime
 from pathlib import Path
-
-import pandas as pd
 import streamlit as st
-
-from agents import SNAPSHOT_DATE, load_workbook, run_pipeline
-from llm import (
-    copilot_answer,
-    copilot_workbook_answer,
-    enabled,
-    generate_root_cause,
-)
-
-st.set_page_config(
-    page_title="IntelliWarehouse AI",
-    page_icon="◈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# -----------------------------------------------------------------------------
-# Constants
-# -----------------------------------------------------------------------------
-BG_URL = (
-    "https://static.vecteezy.com/system/resources/previews/030/592/227/"
-    "large_2x/retail-warehouse-full-of-shelves-with-goods-in-cardboard-boxes-"
-    "and-packages-logistics-sorting-and-distribution-facility-for-product-"
-    "delivery-generative-ai-photo.jpeg"
-)
-DEFAULT_WORKBOOK = Path(__file__).parent / "Warehouse_AI_Hackathon_Synthetic_Dataset_FINAL_2.xlsx"
-
-NAV = {
-    "Overview": "🏠",
-    "Data Quality": "🔎",
-    "Inventory & Process": "⚙️",
-    "Correlated Cases": "🧠",
-    "Root Cause AI": "🧩",
-    "Trace Graph": "🔗",
-    "Approvals": "✅",
-    "Copilot": "💬",
-    "Data Explorer": "🗄️",
-    "Audit": "🧾",
-}
-
-# -----------------------------------------------------------------------------
-# Session state
-# -----------------------------------------------------------------------------
-if "active_workspace" not in st.session_state:
-    st.session_state.active_workspace = "Overview"
-if "actions" not in st.session_state:
-    st.session_state.actions = {}
-if "audit" not in st.session_state:
-    st.session_state.audit = []
-if "ai_cache" not in st.session_state:
-    st.session_state.ai_cache = {}
-if "ai_error" not in st.session_state:
-    st.session_state.ai_error = None
-
-# -----------------------------------------------------------------------------
-# Styling — single CSS block, no tab hacks / raw CSS outside strings
-# -----------------------------------------------------------------------------
-st.markdown(
-    f"""
-<style>
-:root {{
-    --navy:#153b63;
-    --blue:#2c74b8;
-    --muted:#70839a;
-    --line:#d7e2ec;
-    --panel:rgba(255,255,255,.95);
-}}
-
-/* App background */
-.stApp {{
-    background:
-      linear-gradient(rgba(239,245,250,.80),rgba(239,245,250,.80)),
-      url('{BG_URL}') center center / cover fixed no-repeat !important;
-}}
-[data-testid="stAppViewContainer"] {{ background:transparent !important; }}
-[data-testid="stHeader"] {{ background:rgba(255,255,255,.88) !important; }}
-.block-container {{ max-width:1420px; padding-top:1.1rem; padding-bottom:3rem; }}
-
-/* Sidebar */
-section[data-testid="stSidebar"] {{
-    background:rgba(239,245,250,.98) !important;
-    border-right:1px solid #d4e0eb !important;
-}}
-section[data-testid="stSidebar"] > div:first-child {{ padding-top:1.15rem !important; }}
-.brand {{ display:flex; align-items:center; gap:11px; padding:4px 2px 19px; }}
-.brand-mark {{
-    width:43px; height:43px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-    color:#fff; background:linear-gradient(135deg,#1876c8,#39a8d8); font-size:24px;
-    box-shadow:0 6px 16px rgba(21,85,140,.18);
-}}
-.brand-title {{ color:#123c66; font-size:1.02rem; font-weight:850; line-height:1.15; }}
-.brand-subtitle {{ color:#73869c; font-size:.73rem; margin-top:3px; }}
-.sidebar-section-title,.sidebar-group-label {{
-    color:#74889e; font-size:.66rem; letter-spacing:.10em; font-weight:850; margin:12px 2px 6px;
-}}
-.sidebar-group {{ color:#647a92; font-size:.66rem; letter-spacing:.10em; font-weight:850; margin:4px 2px 5px; }}
-.sidebar-group-label {{ margin-top:14px; }}
-.sidebar-current {{
-    margin:10px 2px; padding:7px 9px; border-radius:9px; background:#e6f1fa;
-    color:#56708a; font-size:.70rem;
-}}
-.sidebar-current b {{ color:#0c5a9e; }}
-section[data-testid="stSidebar"] .stButton {{ margin:2px 0 !important; }}
-section[data-testid="stSidebar"] .stButton > button {{
-    min-height:40px !important; padding:8px 11px !important; border-radius:10px !important;
-    text-align:left !important; justify-content:flex-start !important; font-size:.86rem !important;
-    font-weight:700 !important; width:100% !important;
-}}
-section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
-    color:#536b84 !important; background:transparent !important; border:1px solid transparent !important;
-    box-shadow:none !important;
-}}
-section[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {{
-    color:#154f7e !important; background:#edf5fc !important; border-color:#dbe7f1 !important;
-}}
-section[data-testid="stSidebar"] .stButton > button[kind="primary"] {{
-    color:#0b579b !important; background:#dcecfb !important; border:1px solid #c2dbee !important;
-    box-shadow:inset 3px 0 0 #1c77bb !important;
-}}
-section[data-testid="stSidebar"] [data-testid="stFileUploader"] {{
-    background:#fff !important; border:1px solid #d9e3ed !important; border-radius:12px !important; padding:8px !important;
-}}
-
-/* Hero */
-.hero {{
-    margin:3px 0 13px; padding:30px 34px 25px; border-radius:24px;
-    color:#fff; background:linear-gradient(135deg,#0b2853 0%,#174783 55%,#2a67b1 100%);
-    box-shadow:0 12px 28px rgba(11,40,83,.18);
-}}
-.hero h1 {{ color:#fff !important; font-size:2.25rem; font-weight:850; margin:0; letter-spacing:-.035em; }}
-.hero p {{ color:#e9f1fb !important; font-size:1rem; font-weight:650; margin:.45rem 0 0; }}
-
-/* Main hierarchy */
-.workspace-kicker {{ color:#6f8298; font-size:.67rem; font-weight:850; letter-spacing:.10em; text-transform:uppercase; }}
-.page-title {{ color:#153f68; font-size:1.70rem; font-weight:850; margin-top:2px; }}
-.page-subtitle {{ color:#6f8299; font-size:.84rem; margin:4px 0 14px; }}
-h1,h2,h3,h4 {{ color:#153d66 !important; }}
-.stCaption {{ color:#71839a !important; }}
-
-/* Overview cards */
-.overview-card {{
-    min-height:136px; padding:16px 17px 14px; border-radius:16px;
-    background:rgba(255,255,255,.96); border:1px solid var(--line);
-    box-shadow:0 5px 15px rgba(22,54,88,.06);
-}}
-.overview-card .icon {{
-    width:36px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center;
-    font-size:18px; font-weight:800; margin-bottom:10px;
-}}
-.overview-card .label {{ color:#60758c; font-size:.80rem; font-weight:750; }}
-.overview-card .value {{ color:#153b63; font-size:1.72rem; font-weight:850; line-height:1.05; margin:3px 0 6px; }}
-.overview-card .desc {{ color:#78899d; font-size:.72rem; line-height:1.35; }}
-.blue .icon {{ background:#e7f0ff; color:#2359a8; }}
-.teal .icon {{ background:#e4f8f5; color:#087f73; }}
-.amber .icon {{ background:#fff3d8; color:#a66a00; }}
-.purple .icon {{ background:#f0eaff; color:#6f42c1; }}
-.red .icon {{ background:#ffe8e7; color:#c23b35; }}
-.green .icon {{ background:#e5f7eb; color:#24824a; }}
-
-/* Operational status cards */
-.ops-status-card {{
-    min-height:112px; padding:14px 16px 13px 19px; border-radius:14px; background:rgba(255,255,255,.97);
-    border:1px solid #d7e2ec; box-shadow:0 5px 14px rgba(19,52,85,.06); position:relative; overflow:hidden;
-}}
-.ops-status-card::before {{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; }}
-.ops-status-card.dq::before {{ background:#d84b45; }}
-.ops-status-card.process::before {{ background:#dd941e; }}
-.ops-status-card.rca::before {{ background:#7448c6; }}
-.ops-status-card.approval::before {{ background:#2c74b8; }}
-.ops-top {{ display:flex; align-items:center; gap:8px; }}
-.ops-step {{
-    width:27px; height:27px; border-radius:8px; background:#eef4fa; color:#6a8098;
-    display:flex; align-items:center; justify-content:center; font-size:.65rem; font-weight:850;
-}}
-.ops-status-card.dq .ops-step {{ background:#fdeceb; color:#b43f39; }}
-.ops-status-card.process .ops-step {{ background:#fff2dd; color:#b9780d; }}
-.ops-status-card.rca .ops-step {{ background:#f0eaff; color:#6740b4; }}
-.ops-status-card.approval .ops-step {{ background:#e8f2fb; color:#2465a2; }}
-.ops-title {{ color:#3f5570; font-size:.79rem; font-weight:800; }}
-.ops-value {{ color:#153b63; font-size:2.05rem; font-weight:850; line-height:1; margin-top:9px; }}
-.ops-sub {{ color:#7a899d; font-size:.70rem; margin-top:6px; }}
-
-/* Attention */
-.attention-panel {{
-    display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 14px; margin:13px 0 14px;
-    border-radius:12px; background:rgba(255,255,255,.96); border:1px solid #d8e2ec;
-    box-shadow:0 4px 10px rgba(22,54,88,.05);
-}}
-.attention-heading {{ display:flex; flex-direction:column; gap:2px; min-width:165px; }}
-.attention-title {{ color:#173d64; font-size:.80rem; font-weight:850; }}
-.attention-caption {{ color:#8a98a8; font-size:.64rem; }}
-.attention-items {{ display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }}
-.attention-item {{ display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border-radius:999px; font-size:.70rem; font-weight:750; border:1px solid #dde5ed; }}
-.attention-item.critical {{ background:#fff0ef; color:#b23d37; border-color:#f0cecc; }}
-.attention-item.high {{ background:#fff5e5; color:#99670d; border-color:#f0ddb9; }}
-.attention-item.pending {{ background:#edf5fc; color:#2c6399; border-color:#d1e1ef; }}
-.attention-dot {{ width:7px; height:7px; border-radius:50%; display:inline-block; }}
-.attention-item.critical .attention-dot {{ background:#d54b45; }}
-.attention-item.high .attention-dot {{ background:#dc951d; }}
-.attention-item.pending .attention-dot {{ background:#3178bd; }}
-.attention-panel.clear {{ background:rgba(241,250,246,.96); border-color:#d6ebe0; }}
-.attention-clear {{ color:#2e6b57; font-size:.72rem; font-weight:700; }}
-
-/* Workflow */
-.workflow-heading {{ color:#6d8097; font-size:.67rem; font-weight:850; letter-spacing:.09em; text-transform:uppercase; margin:3px 0 1px; }}
-.workflow-subheading {{ color:#8a98a8; font-size:.68rem; margin-bottom:7px; }}
-.workflow-card {{
-    min-height:160px; padding:14px 15px 13px; border-radius:14px; background:rgba(255,255,255,.97);
-    border:1px solid #d6e1eb; box-shadow:0 5px 14px rgba(18,54,95,.06); position:relative; overflow:hidden;
-}}
-.workflow-card::before {{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; }}
-.workflow-card.find::before {{ background:#2f75b9; }}
-.workflow-card.understand::before {{ background:#7549c5; }}
-.workflow-card.decide::before {{ background:#15986f; }}
-.workflow-top {{ display:flex; justify-content:space-between; align-items:center; }}
-.workflow-icon {{ width:33px; height:33px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:#edf5fb; font-size:18px; }}
-.workflow-card.understand .workflow-icon {{ background:#f1ebff; }}
-.workflow-card.decide .workflow-icon {{ background:#eaf8f1; }}
-.workflow-step {{ color:#8b99a9; font-size:.64rem; font-weight:850; }}
-.workflow-kicker {{ color:#718399; font-size:.61rem; font-weight:850; letter-spacing:.08em; margin-top:10px; }}
-.workflow-title {{ color:#183e65; font-size:1.00rem; font-weight:850; line-height:1.18; margin-top:3px; }}
-.workflow-body {{ color:#71849a; font-size:.74rem; line-height:1.40; margin-top:7px; }}
-.workflow-destination {{ color:#2b6da9; font-size:.70rem; font-weight:800; margin-top:10px; }}
-.overview-help {{ display:flex; align-items:center; gap:8px; padding:9px 12px; margin-top:12px; border-radius:11px; border:1px solid #d5e3f2; background:rgba(239,247,255,.91); color:#4f6b88; font-size:.71rem; line-height:1.35; }}
-.help-icon {{ width:18px; height:18px; flex:0 0 18px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#2b73ba; color:#fff; font-size:.65rem; font-weight:850; }}
-
-/* Investigation cards / filters */
-.findings-header {{ margin:5px 0 10px; }}
-.findings-kicker {{ color:#7448c6; font-size:.67rem; font-weight:850; letter-spacing:.10em; }}
-.findings-title {{ color:#183e65; font-size:1.42rem; font-weight:850; margin-top:2px; }}
-.findings-subtitle {{ color:#71839a; font-size:.78rem; margin-top:3px; }}
-.finding-severity {{ min-height:84px; padding:13px 15px; border-radius:13px; background:rgba(255,255,255,.96); border:1px solid #d9e3ed; box-shadow:0 4px 12px rgba(22,54,88,.05); position:relative; overflow:hidden; }}
-.finding-severity::before {{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; }}
-.finding-severity.critical::before {{ background:#d64545; }}
-.finding-severity.high::before {{ background:#e39a20; }}
-.finding-severity.medium::before {{ background:#4679be; }}
-.finding-severity.low::before {{ background:#6e7f92; }}
-.finding-severity-label {{ color:#6d7d92; font-size:.75rem; font-weight:750; }}
-.finding-severity-value {{ color:#173b63; font-size:1.65rem; font-weight:850; line-height:1.05; margin-top:5px; }}
-.card {{ background:rgba(255,255,255,.94); border:1px solid #dce5ee; border-radius:14px; padding:16px; box-shadow:0 5px 14px rgba(18,54,95,.05); }}
-.good {{ background:#eef9f4; border:1px solid #d6ede1; border-radius:12px; padding:12px; }}
-.warn {{ background:#fff7e8; border:1px solid #f0dfb8; border-radius:12px; padding:12px; }}
-
-/* RCA */
-.rca-case-strip {{ display:flex; align-items:center; justify-content:space-between; gap:18px; margin:7px 0 13px; padding:15px 17px; border:1px solid #d5e1ec; border-radius:14px; background:rgba(255,255,255,.97); box-shadow:0 5px 14px rgba(18,54,95,.06); }}
-.rca-label,.rca-panel-kicker {{ color:#7a8a9e; font-size:.62rem; font-weight:850; letter-spacing:.09em; }}
-.rca-case-id {{ color:#173e67; font-size:1.28rem; font-weight:850; margin-top:2px; }}
-.rca-material {{ color:#75869a; font-size:.76rem; margin-top:2px; }}
-.rca-case-right {{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }}
-.rca-severity,.rca-impact {{ display:inline-flex; padding:7px 10px; border-radius:999px; font-size:.73rem; font-weight:800; border:1px solid #d7e1eb; background:#f6f8fb; color:#485c74; }}
-.rca-severity.critical {{ background:#fff0ef; color:#b83f39; border-color:#f2cfcc; }}
-.rca-severity.high {{ background:#fff5e4; color:#a76a09; border-color:#f1ddbc; }}
-.rca-severity.medium {{ background:#eef4fc; color:#326aa3; border-color:#cfdded; }}
-.rca-panel {{ padding:15px 16px; background:rgba(255,255,255,.96); border:1px solid #d7e2ec; border-radius:14px; box-shadow:0 5px 14px rgba(18,54,95,.05); margin-bottom:12px; }}
-.rca-panel-head {{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }}
-.rca-panel-icon {{ width:31px; height:31px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:#eef4fa; font-size:16px; }}
-.rca-panel-title {{ color:#183f67; font-size:.96rem; font-weight:850; margin-top:2px; }}
-.rca-cause {{ border-left:4px solid #7448c6; }}
-.rca-evidence {{ border-left:4px solid #2f73b7; }}
-.rca-action {{ border-left:4px solid #15986f; }}
-.rca-impact-panel {{ border-left:4px solid #d48b1b; }}
-.rca-cause-copy {{ color:#344f6f; font-size:.88rem; line-height:1.55; }}
-.rca-evidence-row {{ display:flex; align-items:flex-start; gap:8px; padding:7px 0; color:#3d5570; font-size:.79rem; line-height:1.35; border-bottom:1px solid #edf1f5; }}
-.rca-evidence-row:last-child {{ border-bottom:0; }}
-.rca-check {{ color:#2b78bb; font-weight:900; }}
-.rca-action-copy {{ color:#315960; font-size:.83rem; line-height:1.48; padding:11px 12px; background:#eef9f4; border:1px solid #d5ece1; border-radius:10px; }}
-.rca-impact-score {{ color:#183e66; font-size:1.80rem; font-weight:850; line-height:1; margin:3px 0 10px; }}
-.rca-impact-score span {{ color:#7b8c9f; font-size:.76rem; font-weight:700; }}
-.rca-impact-track {{ height:8px; border-radius:99px; background:#e8eef4; overflow:hidden; }}
-.rca-impact-fill {{ height:100%; border-radius:99px; background:#d48b1b; }}
-.rca-impact-note {{ color:#8090a2; font-size:.68rem; margin-top:6px; }}
-.rca-ai-box {{ padding:13px 15px; margin:2px 0 8px; border:1px solid #cedded; border-radius:13px; background:linear-gradient(135deg,rgba(238,246,255,.97),rgba(248,245,255,.97)); }}
-.rca-ai-kicker,.ai-output-title {{ color:#7044c5; font-size:.63rem; font-weight:850; letter-spacing:.09em; }}
-.rca-ai-title {{ color:#183f67; font-size:.95rem; font-weight:850; margin-top:2px; }}
-.rca-ai-copy {{ color:#73859a; font-size:.72rem; margin-top:4px; line-height:1.35; }}
-.ai-output-title {{ margin:10px 0 5px; }}
-.ai-brief-title-row {{ display:flex; align-items:center; gap:8px; margin:9px 0 2px; padding:7px 10px; border-radius:9px; background:rgba(255,255,255,.90); border:1px solid #dce5ed; color:#183d64; font-size:.79rem; font-weight:850; }}
-.ai-brief-title-row.cause {{ border-left:4px solid #7448c6; }}
-.ai-brief-title-row.factors {{ border-left:4px solid #2f73b7; }}
-.ai-brief-title-row.impact {{ border-left:4px solid #d48b1b; }}
-.ai-brief-title-row.action {{ border-left:4px solid #15986f; }}
-.ai-brief-title-row.confidence {{ border-left:4px solid #62778d; }}
-.ai-brief-icon {{ font-size:15px; }}
-
-/* Trace / approvals */
-.trace-node {{ padding:13px 12px; border-radius:12px; background:rgba(255,255,255,.95); border:1px solid #dbe4ec; text-align:center; }}
-.trace-node strong {{ color:#1a456d; font-size:.79rem; }}
-.trace-node small {{ color:#7c8da0; font-size:.67rem; }}
-.join-table {{ font-size:.78rem; }}
-.approval-card {{ padding:14px 15px; border:1px solid #d9e3ec; border-radius:13px; background:rgba(255,255,255,.95); margin-bottom:10px; }}
-
-/* Buttons */
-.stButton > button {{ border-radius:9px !important; font-weight:750 !important; border:1px solid #b9cbe0 !important; color:#12365f !important; background:#fff !important; }}
-.stButton > button[kind="primary"] {{ color:#fff !important; background:#1f70b8 !important; border-color:#1f70b8 !important; }}
-
-@media (max-width: 1000px) {{
-    .hero h1 {{ font-size:1.8rem; }}
-    .rca-case-strip {{ flex-direction:column; align-items:flex-start; }}
-}}
-
-.rca-context-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-top:14px;
-    padding-top:10px;
-    border-top:1px solid #e5ebf1;
-    color:#71839a;
-    font-size:.73rem;
-}
-.rca-context-row b{
-    color:#173f66;
-    font-size:.92rem;
-}
-.rca-awaiting{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    margin-top:11px;
-    padding:16px 17px;
-    border:1px dashed #bfd1e3;
-    border-radius:14px;
-    background:rgba(246,250,254,.90);
-}
-.rca-awaiting-icon{
-    width:36px;
-    height:36px;
-    border-radius:10px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#eef5fb;
-    font-size:18px;
-}
-.rca-awaiting-title{
-    color:#1a4168;
-    font-size:.87rem;
-    font-weight:850;
-}
-.rca-awaiting-copy{
-    color:#71849a;
-    font-size:.74rem;
-    line-height:1.4;
-    margin-top:3px;
-}
+import httpx
 
 
-.copilot-result-label{
-    margin:10px 0 5px;
-    color:#1f6da9;
-    font-size:.66rem;
-    font-weight:850;
-    letter-spacing:.10em;
-}
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-# -----------------------------------------------------------------------------
-# Sidebar navigation
-# -----------------------------------------------------------------------------
-def nav_button(label: str) -> None:
-    icon = NAV[label]
-    active = st.session_state.active_workspace == label
-    if st.button(
-        f"{icon}  {label}",
-        key=f"nav_{label}",
-        type="primary" if active else "secondary",
-        use_container_width=True,
-    ):
-        st.session_state.active_workspace = label
-        st.rerun()
+def _secret(name: str, default=None):
+    """Read Streamlit Cloud Secrets first, then local environment variables."""
+    try:
+        value = st.secrets.get(name)
+        if value not in (None, ""):
+            return value
+    except Exception:
+        pass
+    return os.getenv(name, default)
 
 
-with st.sidebar:
-    st.markdown(
-        "<div class='brand'><div class='brand-mark'>◈</div>"
-        "<div><div class='brand-title'>IntelliWarehouse AI</div>"
-        "<div class='brand-subtitle'>Warehouse intelligence workspace</div></div></div>",
-        unsafe_allow_html=True,
+SYSTEM_PROMPT = """
+You are the Root-Cause Analyst and Warehouse Copilot for a warehouse AI control tower.
+
+You receive structured evidence generated from an Excel/SAP-style warehouse dataset.
+
+Rules:
+1. Use ONLY the supplied evidence.
+2. Never invent quantities, IDs, dates, vendors, relationships, or business events.
+3. Explicitly connect evidence across systems only when the supplied workbook evidence supports the relationship.
+4. Distinguish observed facts from inference.
+5. When explaining a finding, explain the exact finding first, then direct evidence, then related/correlated risks.
+6. Keep exact workbook values, IDs, dates, quantities, and field names.
+7. Treat the connected workbook records as the primary source of truth. Pre-computed metrics and root-cause text are supporting summaries, not substitutes for the records.
+8. Separate: (a) confirmed facts directly observed in records, (b) deterministic calculations, (c) inferred root cause, and (d) contributing factors/symptoms.
+9. Do not call a calculated negative "available stock" a physical stock quantity. If blocked quantity exceeds on-hand, describe the inconsistency and usable available stock separately.
+10. Recommendations are proposals only. Never claim an action was executed.
+11. If evidence is insufficient, say so.
+12. Be concise but useful for an operations user.
+"""
+
+
+def get_token() -> str:
+    """Get the VW Group IDP access token using the same flow as the verified test."""
+    client_id = _secret("VW_IDP_CLIENT_ID")
+    client_secret = _secret("VW_IDP_CLIENT_SECRET")
+
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "Missing VW_IDP_CLIENT_ID or VW_IDP_CLIENT_SECRET in Streamlit Secrets."
+        )
+
+    url = (
+        "https://idp.cloud.vwgroup.com/"
+        "auth/realms/kums-mfa/"
+        "protocol/openid-connect/token"
     )
 
-    st.markdown("<div class='sidebar-group'>CORE</div>", unsafe_allow_html=True)
-    nav_button("Overview")
-
-    st.markdown("<div class='sidebar-group-label'>OPERATIONS</div>", unsafe_allow_html=True)
-    nav_button("Data Quality")
-    nav_button("Inventory & Process")
-    nav_button("Correlated Cases")
-
-    st.markdown("<div class='sidebar-group-label'>AI & WORKFLOW</div>", unsafe_allow_html=True)
-    nav_button("Root Cause AI")
-    nav_button("Trace Graph")
-    nav_button("Approvals")
-    nav_button("Copilot")
-
-    st.markdown("<div class='sidebar-group-label'>DATA & GOVERNANCE</div>", unsafe_allow_html=True)
-    nav_button("Data Explorer")
-    nav_button("Audit")
-
-    st.markdown(
-        f"<div class='sidebar-current'>Current: <b>{st.session_state.active_workspace}</b></div>",
-        unsafe_allow_html=True,
+    response = httpx.post(
+        url,
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "client_credentials",
+        },
+        timeout=30.0,
     )
 
-    st.markdown("<div class='sidebar-section-title'>DATA SOURCE</div>", unsafe_allow_html=True)
-    uploaded = st.file_uploader("Upload warehouse workbook", type=["xlsx"])
-    workbook_path = uploaded if uploaded is not None else DEFAULT_WORKBOOK
-    st.caption(f"Snapshot: {SNAPSHOT_DATE.strftime('%d %b %Y') if hasattr(SNAPSHOT_DATE, 'strftime') else SNAPSHOT_DATE}")
+    if response.status_code != 200:
+        detail = ""
+        try:
+            payload = response.json()
+            detail = str(
+                payload.get("error_description")
+                or payload.get("error")
+                or ""
+            ).strip()
+        except Exception:
+            pass
+        message = f"Cloud IDP token request failed: HTTP {response.status_code}"
+        if detail:
+            message += f" — {detail}"
+        raise RuntimeError(message)
 
-    model_name = st.secrets.get("OPENAI_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o"))
-    if enabled():
-        st.success(f"LLM enabled · {model_name}")
-    else:
-        st.warning("LLM not enabled")
-        st.caption("Configure VW IDP + LLM API credentials in Streamlit Secrets.")
-
-    st.markdown("<div class='sidebar-section-title'>GOVERNANCE</div>", unsafe_allow_html=True)
-    st.caption("Human approval required · Simulated actions · Audit retained")
-
-# -----------------------------------------------------------------------------
-# Load deterministic warehouse intelligence
-# -----------------------------------------------------------------------------
-try:
-    raw = load_workbook(workbook_path)
-    data, graph, dq, anomalies, cases = run_pipeline(raw)
-except Exception as exc:
-    st.error(f"Could not load workbook: {exc}")
-    st.stop()
-
-# Default approval records for every case.
-if cases is not None and not cases.empty:
-    for _, row in cases.iterrows():
-        cid = str(row.get("case_id", "")).strip()
-        if cid and cid not in st.session_state.actions:
-            st.session_state.actions[cid] = {
-                "status": "Pending",
-                "approver": "",
-                "note": "",
-                "action": row.get("recommended_action", "Review the linked records before corrective action."),
-            }
-
-pending = sum(
-    1
-    for _, row in cases.iterrows()
-    if st.session_state.actions.get(str(row.get("case_id", "")).strip(), {}).get("status") == "Pending"
-) if cases is not None and not cases.empty else 0
-critical_count = int((cases["severity"].astype(str).str.lower() == "critical").sum()) if not cases.empty and "severity" in cases.columns else 0
-high_count = int((cases["severity"].astype(str).str.lower() == "high").sum()) if not cases.empty and "severity" in cases.columns else 0
-
-# -----------------------------------------------------------------------------
-# Shared helpers
-# -----------------------------------------------------------------------------
-def evidence_text(value) -> str:
-    if not isinstance(value, dict):
-        return str(value)
-    parts = []
-    for key, val in value.items():
-        if isinstance(val, (list, tuple)):
-            rendered = ", ".join(map(str, val))
-        elif val is None or (not isinstance(val, dict) and pd.isna(val)):
-            rendered = "blank"
-        else:
-            rendered = str(val)
-        parts.append(f"{key}={rendered}")
-    return " · ".join(parts)
+    token = response.json().get("access_token")
+    if not token:
+        raise RuntimeError("Cloud IDP response did not contain access_token.")
+    return token
 
 
-def build_finding_context(finding) -> dict:
-    f = finding.to_dict() if hasattr(finding, "to_dict") else dict(finding)
-    entity = str(f.get("entity", "")).strip()
-    ev = f.get("evidence", {}) if isinstance(f.get("evidence"), dict) else {}
+def init_llmaas():
+    """Create the OpenAI-compatible VW Group LLMaaS client."""
+    from openai import OpenAI
 
-    material = None
-    if entity.upper().startswith("MAT-"):
-        material = entity.split("|")[0].strip()
-    elif ev.get("Material"):
-        material = str(ev["Material"]).strip()
-    else:
-        match = re.search(r"MAT-\d+[A-Z]?", entity.upper())
-        if match:
-            material = match.group(0)
+    key = _secret("LLM_API_CLIENT_ID")
+    if not key:
+        raise RuntimeError("Missing LLM_API_CLIENT_ID in Streamlit Secrets.")
 
-    connected = {}
-    if material:
-        for sheet, column in [
-            ("Material_Master", "Material"),
-            ("Inventory_Stock", "Material"),
-            ("Warehouse_Bin", "Assigned Material"),
-            ("Deliveries_Dispatch", "Material"),
-            ("Purchase_Replenish", "Material"),
-        ]:
-            frame = data.get(sheet, pd.DataFrame())
-            if not frame.empty and column in frame.columns:
-                connected[sheet] = frame[frame[column].astype(str).eq(material)].head(25).to_dict("records")
-            else:
-                connected[sheet] = []
+    token = get_token()
 
-        po_rows = pd.DataFrame(connected.get("Purchase_Replenish", []))
-        vdf = data.get("Vendor_Master", pd.DataFrame())
-        if not po_rows.empty and "Vendor" in po_rows.columns and not vdf.empty and "Vendor" in vdf.columns:
-            vendors = set(po_rows["Vendor"].astype(str))
-            connected["Vendor_Master"] = vdf[vdf["Vendor"].astype(str).isin(vendors)].head(10).to_dict("records")
-        else:
-            connected["Vendor_Master"] = []
-    else:
-        connected["Direct Evidence"] = [ev]
+    return OpenAI(
+        api_key=token,
+        base_url=_secret(
+            "LLM_API_BASE_URL",
+            "https://llmapi.ai.vwgroup.com",
+        ),
+        default_headers={
+            "X-LLM-API-CLIENT-ID": f"Bearer {key}"
+        },
+    )
 
-    related = []
-    for frame in [dq, anomalies]:
-        if frame is None or frame.empty:
-            continue
-        for _, row in frame.iterrows():
-            if str(row.get("issue_id", "")) == str(f.get("issue_id", "")):
-                continue
-            if material and material in str(row.get("entity", "")).split("|"):
-                related.append({
-                    "issue_id": row.get("issue_id"),
-                    "severity": row.get("severity"),
-                    "title": row.get("title"),
-                    "detail": row.get("detail"),
-                    "evidence": row.get("evidence"),
-                })
 
-    return {
-        "finding_type": "Data Quality" if str(f.get("issue_id", "")).startswith("DQ-") else "Anomaly",
-        "issue_id": f.get("issue_id"),
-        "severity": f.get("severity"),
-        "entity": entity,
-        "title": f.get("title"),
-        "detail": f.get("detail"),
-        "exact_finding_evidence": ev,
-        "material": material,
-        "connected_workbook_records": connected,
-        "related_findings": related[:30],
+def enabled() -> bool:
+    return bool(
+        _secret("VW_IDP_CLIENT_ID")
+        and _secret("VW_IDP_CLIENT_SECRET")
+        and _secret("LLM_API_CLIENT_ID")
+    )
+
+
+def llm_configured() -> bool:
+    return enabled()
+
+
+def _client():
+    return init_llmaas()
+
+
+def _llm_complete(
+    prompt: str,
+    system_prompt: str = SYSTEM_PROMPT,
+    model: str | None = None,
+) -> str:
+    """Call VW Group LLMaaS with the same Chat Completions pattern as the working test."""
+    if not enabled():
+        raise RuntimeError(
+            "VW Group LLMaaS is not configured. Add the VW IDP credentials and LLM API key to Streamlit Secrets."
+        )
+
+    client = init_llmaas()
+    model = model or _secret("OPENAI_MODEL", "gpt-4o")
+
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        stream=False,
+        temperature=0.0,
+        max_tokens=500,
+    )
+
+    answer = completion.choices[0].message.content
+    if not answer:
+        raise RuntimeError("VW Group LLMaaS returned an empty response.")
+    return answer.strip()
+
+
+def get_embedding(input_text: str) -> dict:
+    """Create an embedding using the verified VW Group LLMaaS model."""
+    if not enabled():
+        raise RuntimeError(
+            "VW Group LLMaaS is not configured. Add the VW IDP credentials and LLM API key to Streamlit Secrets."
+        )
+
+    client = init_llmaas()
+    return client.embeddings.create(
+        model="text-embedding-3-large",
+        input=input_text,
+        encoding_format="float",
+    )
+
+
+def generate_root_cause(case: dict, model: str | None = None) -> str:
+    """Generate a concise, decision-ready RCA brief using VW Group LLMaaS."""
+    if not enabled():
+        raise RuntimeError(
+            "VW Group LLMaaS is not configured. "
+            "Set VW_IDP_CLIENT_ID, VW_IDP_CLIENT_SECRET and LLM_API_CLIENT_ID in Streamlit Secrets."
+        )
+
+    model = model or _secret("OPENAI_MODEL", "gpt-4o")
+
+    prompt = f"""
+You are the Root Cause AI analyst for IntelliWarehouse AI.
+
+PURPOSE
+Turn a correlated warehouse case into a short, trustworthy decision brief for an operations manager.
+
+SOURCE OF TRUTH
+Use ONLY the CASE DATA below. Do not add facts that are not present.
+CASE DATA:
+{json.dumps(case, indent=2, default=str)}
+
+IMPORTANT WRITING RULES
+- Do not copy the existing root_cause sentence.
+- Rewrite it into a simple causal chain.
+- Start with the single most important operational problem.
+- Use exact numbers and IDs only when they materially explain the problem.
+- Separate cause, contributing factors, impact and action.
+- Do not repeat the same fact in multiple sections.
+- Do not use vague phrases such as "there appears to be".
+- Do not mention being an AI.
+- Do not mention prompts, instructions, source code, or limitations unless evidence is actually missing.
+- Recommendations are proposed actions, not completed actions.
+- Keep the total response under 180 words.
+- Use plain warehouse/operations language.
+- Never output HTML, SVG, links, URLs, escaped markdown, or code fences.
+
+CASE INTERPRETATION GUIDANCE
+- If demand > usable available stock, state the shortage explicitly.
+- If blocked stock > physical on-hand, explain the inconsistency and state usable stock separately.
+- Distinguish physical on-hand, blocked quantity, usable available quantity and demand.
+- Delivery overdue status is a contributing execution risk unless the supplied evidence proves it is the primary cause.
+- Warehouse capacity excess is a contributing storage risk unless evidence proves otherwise.
+- Vendor/PO block is a replenishment constraint unless evidence proves it is the primary cause.
+- Use the case severity and impact score only in the Impact section.
+
+OUTPUT FORMAT
+Return EXACTLY these five sections, with no others:
+
+PRIMARY ROOT CAUSE
+One or two sentences. State the main causal chain and the key quantity.
+
+CONTRIBUTING FACTORS
+3 or 4 bullets. One fact per bullet.
+
+OPERATIONAL IMPACT
+One or two sentences describing the business/warehouse consequence.
+
+RECOMMENDED ACTION
+2 short numbered actions.
+
+CONFIDENCE
+One sentence: High, Medium or Low, followed by a brief evidence-based reason.
+"""
+
+    return _llm_complete(
+        prompt=prompt,
+        system_prompt=(
+            "You are a precise warehouse operations analyst. "
+            "Produce concise, evidence-grounded management summaries. "
+            "Never expose chain-of-thought. "
+            "Follow the requested output format exactly."
+        ),
+        model=model,
+    )
+
+def _load_copilot_workbook():
+    """Load the complete six-sheet workbook so Copilot is never limited to a correlated case."""
+    import pandas as pd
+
+    candidates = [
+        Path(__file__).with_name("Warehouse_AI_Hackathon_Synthetic_Dataset_FINAL 2.xlsx"),
+        Path(__file__).with_name("Warehouse_AI_Hackathon_Synthetic_Dataset_FINAL_2.xlsx"),
+    ]
+    workbook = next((p for p in candidates if p.exists()), None)
+    if workbook is None:
+        return {}
+
+    try:
+        sheets = pd.read_excel(workbook, sheet_name=None)
+        wanted = {
+            "Material_Master", "Inventory_Stock", "Warehouse_Bin",
+            "Deliveries_Dispatch", "Purchase_Replenish", "Vendor_Master"
+        }
+        return {k: v for k, v in sheets.items() if k in wanted}
+    except Exception:
+        return {}
+
+
+def _is_general_copilot_question(question: str) -> bool:
+    """Return True unless the operator explicitly asks for RCA/explanation of a finding/case."""
+    qn = _norm(question)
+    rca_terms = [
+        "rootcause", "root cause", "whyisthisfinding", "explainthisfinding",
+        "explainfinding", "explainanomaly", "explaincase", "explainthiscase",
+        "whyisthisanomaly", "whyisthiscase", "whyflagged", "whywasthisflagged",
+    ]
+    return not any(term.replace(" ", "") in qn for term in rca_terms)
+
+
+def copilot_answer(question: str, case: dict | None = None, model: str | None = None) -> str:
+    """General-purpose Copilot entry point.
+
+    IMPORTANT: this function intentionally loads the complete workbook.  The
+    `case` argument is optional supporting context for an explicit RCA/finding
+    question; it is NOT the primary evidence source for normal Copilot queries.
+    This keeps questions like "how many expired inventory?" workbook-wide even
+    when the UI happens to pass a selected finding/case.
+    """
+    workbook = _load_copilot_workbook()
+    case = case or {}
+
+    if not enabled():
+        # Delegate to the workbook-aware deterministic engine whenever possible.
+        try:
+            import pandas as pd
+            dq = pd.DataFrame(case.get("related_data_quality_findings", []))
+            anomalies = pd.DataFrame(case.get("related_anomaly_findings", []))
+            if workbook:
+                return copilot_workbook_answer(question, dq, anomalies, workbook, model)
+        except Exception:
+            pass
+        return fallback_copilot(question, case)
+
+    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+
+    workbook_records = {
+        sheet: df.to_dict("records")
+        for sheet, df in workbook.items()
     }
 
+    explicit_rca = not _is_general_copilot_question(question)
+    context = {
+        "operator_question": question,
+        "snapshot_date": "2026-09-05",
+        "complete_workbook": workbook_records,
+    }
 
-def page_header(kicker: str, title: str, subtitle: str) -> None:
-    st.markdown(
-        f"<div class='workspace-kicker'>{kicker}</div>"
-        f"<div class='page-title'>{title}</div>"
-        f"<div class='page-subtitle'>{subtitle}</div>",
-        unsafe_allow_html=True,
+    if explicit_rca and case:
+        context["selected_case_or_finding_supporting_context"] = case
+
+    prompt = f"""
+You are the general-purpose Warehouse Control Tower Copilot.
+
+Operator question:
+{question}
+
+Evidence:
+{json.dumps(context, indent=2, default=str)}
+
+PRIMARY RULE:
+Answer the operator's actual question using the COMPLETE SIX-SHEET WORKBOOK
+above. Never assume that the currently selected finding, anomaly, material, or
+correlated case defines the scope of the question.
+
+For normal/general questions, the workbook is the primary and authoritative
+scope. The selected case/finding is only supporting context and must NOT narrow
+the answer.
+
+For an explicit RCA/finding/case explanation, you may use the selected case as
+supporting context, but verify it against the complete workbook records.
+
+You can answer questions about:
+- Material_Master
+- Inventory_Stock
+- Warehouse_Bin
+- Deliveries_Dispatch
+- Purchase_Replenish
+- Vendor_Master
+
+Rules:
+1. For counts, totals, averages, comparisons, rankings and date logic, calculate
+   from the supplied workbook records.
+2. For lists, show actual IDs/materials/vendors and exact workbook values.
+3. Understand natural-language synonyms and case-insensitive field names.
+4. If the question is workbook-wide, inspect ALL relevant rows.
+5. If the question names a material/vendor/PO/delivery, find it in the workbook
+   and connect related records across sheets using actual keys.
+6. Do not use correlated-case evidence as a substitute for the workbook.
+7. Never invent quantities, IDs, dates, statuses, relationships or events.
+8. Preserve exact workbook values.
+9. Distinguish confirmed facts, deterministic calculations and inference.
+10. If a requested value is unavailable, say so rather than substituting a
+    selected case's value.
+11. Start with a direct answer. Use a compact table/list when useful.
+
+Example:
+If the operator asks "How many expired inventory?", calculate expiration across
+ALL Inventory_Stock rows using Batch Expiry relative to the 2026-09-05 snapshot.
+Do not answer from a selected material such as MAT-100056.
+"""
+
+    return _llm_complete(
+        prompt=prompt,
+        system_prompt=SYSTEM_PROMPT,
+        model=model,
     )
 
 
-def severity_cards(frame: pd.DataFrame) -> None:
-    sev = frame["severity"].astype(str).str.strip().str.title() if not frame.empty and "severity" in frame.columns else pd.Series(dtype=str)
-    counts = {x: int((sev == x).sum()) for x in ["Critical", "High", "Medium", "Low"]}
-    cols = st.columns(4)
-    for col, (label, tone) in zip(cols, [("Critical", "critical"), ("High", "high"), ("Medium", "medium"), ("Low", "low")]):
-        with col:
-            st.markdown(
-                f"<div class='finding-severity {tone}'><div class='finding-severity-label'>{label}</div>"
-                f"<div class='finding-severity-value'>{counts[label]:,}</div></div>",
-                unsafe_allow_html=True,
-            )
+# -------------------------------------------------------------------
+# Generic helpers for workbook-aware Copilot
+# -------------------------------------------------------------------
+
+def _norm(value) -> str:
+    """Case-insensitive, punctuation-insensitive matching."""
+    if value is None:
+        return ""
+    return re.sub(r"[^a-z0-9]+", "", str(value).strip().lower())
 
 
-def clean_ai_text(raw_text: str) -> str:
-    text = str(raw_text or "").strip()
-    text = text.replace("\\###", "###")
-    text = re.sub(r"\[svg\]\([^)]*\)", "", text, flags=re.I)
-    text = re.sub(r"<svg[\s\S]*?</svg>", "", text, flags=re.I)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text
+def _display(value):
+    if value is None:
+        return "blank"
+    try:
+        import pandas as pd
+        if pd.isna(value):
+            return "blank"
+    except Exception:
+        pass
+    return str(value)
 
 
-def render_rca_ai_output(raw_text: str) -> None:
-    text = clean_ai_text(raw_text)
-    if not text:
-        st.info("No AI explanation was returned.")
-        return
+def _find_column(df, user_text):
+    """Find a dataframe column regardless of capitalization/spaces/punctuation."""
+    if df is None or getattr(df, "empty", False) and len(getattr(df, "columns", [])) == 0:
+        return None
 
-    sections = {}
-    current = None
-    buffer = []
-    for line in text.splitlines():
-        match = re.match(r"^\s*#{2,3}\s*(.+?)\s*$", line)
-        if match:
-            if current:
-                sections[current] = "\n".join(buffer).strip()
-            current = match.group(1).strip()
-            buffer = []
-        elif current:
-            buffer.append(line)
-    if current:
-        sections[current] = "\n".join(buffer).strip()
+    target = _norm(user_text)
 
-    section_map = [
-        ("Primary Root Cause", "cause", "🧠"),
-        ("Root Cause", "cause", "🧠"),
-        ("Contributing Factors", "factors", "🔎"),
-        ("Evidence", "factors", "🔎"),
-        ("Evidence Chain", "factors", "🔎"),
-        ("Operational Impact", "impact", "📊"),
-        ("Business Impact", "impact", "📊"),
-        ("Recommended Action", "action", "✅"),
-        ("Confidence", "confidence", "✓"),
-    ]
+    for col in df.columns:
+        if _norm(col) == target:
+            return col
 
-    seen = set()
-    rendered = False
-    for title, tone, icon in section_map:
-        if title in seen or title not in sections:
+    # Partial matching for phrases such as 'base uom field'.
+    for col in df.columns:
+        ncol = _norm(col)
+        if target and (target in ncol or ncol in target):
+            return col
+
+    return None
+
+
+def _question_column_candidates(question, data):
+    """
+    Return actual workbook columns that appear relevant to the user's question.
+    Matching is case-insensitive.
+    """
+    qn = _norm(question)
+    matches = []
+
+    for sheet, df in data.items():
+        if df is None or not hasattr(df, "columns"):
             continue
-        seen.add(title)
-        body = sections[title]
-        rendered = True
-        st.markdown(
-            f"<div class='ai-brief-title-row {tone}'><span class='ai-brief-icon'>{icon}</span><span>{title}</span></div>",
-            unsafe_allow_html=True,
+
+        for col in df.columns:
+            cn = _norm(col)
+            if not cn:
+                continue
+
+            if cn in qn or cn.replace(" ", "") in qn:
+                matches.append((sheet, col))
+
+    # Common operator synonyms.
+    synonyms = {
+        "uom": ["Base UoM", "UoM"],
+        "unit": ["Base UoM", "UoM", "Unit Price"],
+        "group": ["Material Group"],
+        "materialgroup": ["Material Group"],
+        "type": ["Material Type"],
+        "materialtype": ["Material Type"],
+        "supplier": ["Vendor", "Vendor Name"],
+        "vendor": ["Vendor", "Vendor Name"],
+        "po": ["Purchase Order", "PO Status", "PO Qty"],
+        "purchaseorder": ["Purchase Order"],
+        "delivery": ["Delivery", "Order Qty", "Planned GI Date", "Status"],
+        "route": ["Route"],
+        "plant": ["Plant"],
+        "country": ["Country"],
+        "safetystock": ["Safety Stock"],
+        "reorderpoint": ["Reorder Point"],
+        "rop": ["Reorder Point"],
+        "hazmat": ["Hazmat Flag"],
+        "lifecycle": ["Lifecycle Status"],
+    }
+
+    for key, possible_cols in synonyms.items():
+        if key in qn:
+            for sheet, df in data.items():
+                if df is None or not hasattr(df, "columns"):
+                    continue
+                for col in possible_cols:
+                    actual = _find_column(df, col)
+                    if actual is not None:
+                        pair = (sheet, actual)
+                        if pair not in matches:
+                            matches.append(pair)
+
+    return matches
+
+
+def _extract_ids(question):
+    return set(
+        re.findall(
+            r"\b[A-Z]{2,10}-\d{3,10}[A-Z]?\b",
+            str(question).upper()
         )
-        st.markdown(body)
-
-    if not rendered:
-        st.markdown(text)
-
-
-# -----------------------------------------------------------------------------
-# Global hero + workspace breadcrumb
-# -----------------------------------------------------------------------------
-st.markdown(
-    "<div class='hero'><h1>◈ IntelliWarehouse AI</h1>"
-    "<p>Detect → Correlate → Explain → Impact → Approve</p></div>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    f"<div class='workspace-kicker'>WORKSPACE / {st.session_state.active_workspace}</div>",
-    unsafe_allow_html=True,
-)
-
-# -----------------------------------------------------------------------------
-# Overview
-# -----------------------------------------------------------------------------
-if st.session_state.active_workspace == "Overview":
-    page_header(
-        "OPERATIONS OVERVIEW",
-        "Warehouse health at a glance",
-        "Start with the operational picture, then move through finding, understanding, and decision workspaces.",
     )
 
-    overview_cards = [
-        ("blue", "▦", "Materials", len(data.get("Material_Master", [])), "Master-data records in scope"),
-        ("teal", "◫", "Inventory", len(data.get("Inventory_Stock", [])), "Stock records monitored"),
-        ("amber", "↗", "Deliveries", len(data.get("Deliveries_Dispatch", [])), "Inbound / outbound delivery records"),
-        ("purple", "▤", "Purchase Orders", len(data.get("Purchase_Replenish", [])), "Replenishment records"),
-        ("red", "!", "Findings", len(dq) + len(anomalies), "Data-quality + process issues"),
-        ("green", "⌁", "RCA Cases", len(cases), "Cross-system cases correlated"),
+
+def _finding_evidence(row):
+    ev = row.get("evidence", {})
+    return ev if isinstance(ev, dict) else {}
+
+
+def _finding_text(row):
+    parts = [
+        f"ID={row.get('issue_id', '')}",
+        f"Severity={row.get('severity', '')}",
+        f"Record={row.get('entity', '')}",
+        f"Issue={row.get('title', '')}",
+        f"Explanation={row.get('detail', '')}",
     ]
-    cols = st.columns(6, gap="small")
-    for col, (tone, icon, label, value, desc) in zip(cols, overview_cards):
-        with col:
-            st.markdown(
-                f"<div class='overview-card {tone}'><div class='icon'>{icon}</div>"
-                f"<div class='label'>{label}</div><div class='value'>{value:,}</div><div class='desc'>{desc}</div></div>",
-                unsafe_allow_html=True,
+
+    ev = _finding_evidence(row)
+    if ev:
+        parts.append(
+            "Actual values: " +
+            " · ".join(
+                f"{k}={_display(v)}"
+                for k, v in ev.items()
             )
+        )
 
-    st.markdown("<div class='workflow-heading' style='margin-top:14px'>INVESTIGATION STATUS</div>", unsafe_allow_html=True)
-    status_cards = [
-        ("dq", "01", "Data quality", len(dq), "Findings requiring review"),
-        ("process", "02", "Process anomalies", len(anomalies), "Operational exceptions"),
-        ("rca", "03", "Root-cause cases", len(cases), "Correlated investigations"),
-        ("approval", "04", "Pending approval", pending, "Awaiting human decision"),
-    ]
-    status_cols = st.columns(4, gap="small")
-    for col, (tone, step, title, value, sub) in zip(status_cols, status_cards):
-        with col:
-            st.markdown(
-                f"<div class='ops-status-card {tone}'><div class='ops-top'><span class='ops-step'>{step}</span>"
-                f"<span class='ops-title'>{title}</span></div><div class='ops-value'>{value:,}</div>"
-                f"<div class='ops-sub'>{sub}</div></div>",
-                unsafe_allow_html=True,
+    return "\n".join(parts)
+
+
+def _rows_for_entity(data, entity):
+    """Get connected workbook records for one or more material/vendor/delivery/PO IDs."""
+    result = {}
+    if not entity:
+        return result
+
+    entities = [x.strip() for x in str(entity).split("|") if x.strip()]
+    for sheet, df in data.items():
+        if df is None or not hasattr(df, "columns") or df.empty:
+            continue
+
+        masks = []
+        if "Material" in df.columns:
+            col = df["Material"].astype(str).str.strip().str.upper()
+            wanted = {x.upper() for x in entities}
+            masks.append(col.isin(wanted))
+        if "Assigned Material" in df.columns:
+            col = df["Assigned Material"].astype(str).str.strip().str.upper()
+            wanted = {x.upper() for x in entities}
+            masks.append(col.isin(wanted))
+        if "Vendor" in df.columns:
+            col = df["Vendor"].astype(str).str.strip().str.upper()
+            wanted = {x.upper() for x in entities}
+            masks.append(col.isin(wanted))
+        if "Delivery" in df.columns:
+            col = df["Delivery"].astype(str).str.strip().str.upper()
+            wanted = {x.upper() for x in entities}
+            masks.append(col.isin(wanted))
+        if "Purchase Order" in df.columns:
+            col = df["Purchase Order"].astype(str).str.strip().str.upper()
+            wanted = {x.upper() for x in entities}
+            masks.append(col.isin(wanted))
+
+        if masks:
+            mask = masks[0]
+            for m in masks[1:]:
+                mask = mask | m
+            matched = df[mask]
+            if not matched.empty:
+                result[sheet] = matched.to_dict("records")
+
+    return result
+
+
+def _field_missing_findings(question, dq, data=None):
+    """
+    Find DQ findings related to a field, case-insensitively.
+    Handles Base UoM, base uom, BASE UOM, etc.
+    """
+    if dq is None or dq.empty:
+        return []
+
+    qn = _norm(question)
+    matches = []
+
+    # Exact/semantic field aliases.
+    aliases = {
+        "baseuom": ["baseuom", "uom", "unitofmeasure"],
+        "uom": ["baseuom", "uom", "unitofmeasure"],
+        "materialgroup": ["materialgroup", "group"],
+        "group": ["materialgroup"],
+        "materialtype": ["materialtype", "type"],
+        "type": ["materialtype"],
+        "safetystock": ["safetystock"],
+        "reorderpoint": ["reorderpoint", "rop"],
+        "rop": ["reorderpoint", "rop"],
+        "country": ["country", "vendorcountry"],
+        "plant": ["plant"],
+        "hazmat": ["hazmat", "hazmatflag"],
+        "lifecycle": ["lifecycle", "lifecyclestatus"],
+        "route": ["route"],
+        "unitprice": ["unitprice"],
+    }
+
+    wanted = set()
+
+    for key, vals in aliases.items():
+        if key in qn:
+            wanted.update(vals)
+
+    # Future-proof behavior: if the workbook gains a new column that is not
+    # in the alias dictionary, match the actual column name from the workbook.
+    # Example: a future column named "Storage Zone" will work automatically.
+    if data:
+        for sheet, col in _question_column_candidates(question, data):
+            wanted.add(_norm(col))
+
+    for _, row in dq.iterrows():
+        hay = _norm(
+            " ".join(
+                [
+                    str(row.get("title", "")),
+                    str(row.get("detail", "")),
+                    json.dumps(row.get("evidence", {}), default=str),
+                ]
             )
-
-    attention = []
-    if critical_count:
-        attention.append(f"<div class='attention-item critical'><span class='attention-dot'></span><b>{critical_count}</b> Critical</div>")
-    if high_count:
-        attention.append(f"<div class='attention-item high'><span class='attention-dot'></span><b>{high_count}</b> High</div>")
-    if pending:
-        attention.append(f"<div class='attention-item pending'><span class='attention-dot'></span><b>{pending}</b> Pending approval</div>")
-
-    if attention:
-        st.markdown(
-            "<div class='attention-panel'><div class='attention-heading'><span class='attention-title'>Needs attention</span>"
-            "<span class='attention-caption'>Items requiring operator review</span></div>"
-            f"<div class='attention-items'>{''.join(attention)}</div></div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            "<div class='attention-panel clear'><div class='attention-heading'><span class='attention-title'>Status</span>"
-            "<span class='attention-caption'>Current operational health</span></div>"
-            "<div class='attention-clear'>✓ No critical or high-priority items are currently flagged.</div></div>",
-            unsafe_allow_html=True,
         )
 
-    st.markdown("<div class='workflow-heading'>INVESTIGATION WORKFLOW</div><div class='workflow-subheading'>Three decisions, three destinations</div>", unsafe_allow_html=True)
-    workflow = [
-        ("find", "01", "🔎", "FIND", "What needs attention?", f"<b>{len(dq):,}</b> data-quality findings and <b>{len(anomalies):,}</b> process/inventory anomalies.", "Data Quality"),
-        ("understand", "02", "🧠", "UNDERSTAND", "Why is it happening?", f"<b>{len(cases):,}</b> correlated cases connect materials, inventory, deliveries, POs and vendors.", "Correlated Cases"),
-        ("decide", "03", "✅", "DECIDE", "What should happen next?", f"<b>{pending:,}</b> cases await human approval. Proposed actions remain simulated until approved.", "Approvals"),
-    ]
-    cols = st.columns(3, gap="medium")
-    for col, item in zip(cols, workflow):
-        tone, step, icon, kicker, title, body, destination = item
-        with col:
-            st.markdown(
-                f"<div class='workflow-card {tone}'><div class='workflow-top'><div class='workflow-icon'>{icon}</div>"
-                f"<div class='workflow-step'>{step}</div></div><div class='workflow-kicker'>{kicker}</div>"
-                f"<div class='workflow-title'>{title}</div><div class='workflow-body'>{body}</div>"
-                f"<div class='workflow-destination'>Open {destination} →</div></div>",
-                unsafe_allow_html=True,
+        if wanted and any(w in hay for w in wanted):
+            matches.append(row.to_dict())
+
+    return matches
+
+
+def _specific_finding(question, dq):
+    """Find an exact DQ/AN ID from the user's question."""
+    ids = _extract_ids(question)
+
+    if not ids:
+        return None
+
+    # Search DQ first because DQ-xxxx should resolve to the DQ finding.
+    if dq is not None and not dq.empty:
+        for _, row in dq.iterrows():
+            if str(row.get("issue_id", "")).upper() in ids:
+                return row.to_dict()
+
+    return None
+
+
+def _format_workbook_records(records, max_rows=10):
+    lines = []
+
+    for sheet, rows in records.items():
+        lines.append(f"### {sheet} ({len(rows)} linked rows)")
+
+        for row in rows[:max_rows]:
+            compact = " · ".join(
+                f"{k}={_display(v)}"
+                for k, v in row.items()
             )
-    st.markdown(
-        "<div class='overview-help'><span class='help-icon'>i</span><div><b>Next step:</b> use the sidebar to move from findings → correlation → root cause → trace → human approval.</div></div>",
-        unsafe_allow_html=True,
-    )
+            lines.append(f"- {compact}")
 
-# -----------------------------------------------------------------------------
-# Data Quality
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Data Quality":
-    page_header("FINDINGS", "Data-quality findings", "Prioritize the records that need investigation, then open one finding for evidence.")
-    if dq.empty:
-        st.success("No data-quality findings.")
-    else:
-        severity_cards(dq)
-        c1, c2, c3 = st.columns([1, 1, 1.8])
-        with c1:
-            severity_filter = st.selectbox("Severity", ["All", "Critical", "High", "Medium", "Low"], key="dq_severity")
-        with c2:
-            entity_options = ["All"] + sorted(dq["entity"].astype(str).dropna().unique().tolist())
-            entity_filter = st.selectbox("Record", entity_options, key="dq_entity")
-        with c3:
-            search = st.text_input("Search finding", placeholder="ID, issue, record, or explanation", key="dq_search")
+        if len(rows) > max_rows:
+            lines.append(f"- ... {len(rows) - max_rows} more rows")
 
-        filtered = dq.copy()
-        if severity_filter != "All":
-            filtered = filtered[filtered["severity"].astype(str).str.title() == severity_filter]
-        if entity_filter != "All":
-            filtered = filtered[filtered["entity"].astype(str) == entity_filter]
-        if search.strip():
-            q = search.strip().lower()
-            mask = False
-            for col in ["issue_id", "entity", "title", "detail"]:
-                if col in filtered.columns:
-                    mask = mask | filtered[col].astype(str).str.lower().str.contains(q, na=False)
-            filtered = filtered[mask]
+        lines.append("")
 
-        st.caption(f"Showing {len(filtered):,} of {len(dq):,} data-quality findings")
-        view = filtered[["issue_id", "severity", "entity", "title", "detail"]].copy()
-        view.columns = ["ID", "Severity", "Record", "Issue", "Explanation"]
-        view["Explanation"] = view["Explanation"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 150)
-        st.dataframe(view, width="stretch", hide_index=True, height=330)
-        st.download_button("Export findings", filtered.to_csv(index=False).encode("utf-8"), "intelliwarehouse_data_quality_findings.csv", "text/csv")
+    return "\n".join(lines)
 
-        st.markdown("### Explain a finding")
-        choice = st.selectbox(
-            "Finding",
-            filtered["issue_id"].astype(str).tolist() or dq["issue_id"].astype(str).tolist(),
-            key="dq_explain_choice",
-        )
-        if st.button("Explain selected finding", type="primary", key="dq_explain"):
-            row = dq[dq["issue_id"].astype(str).eq(str(choice))].iloc[0]
-            context = build_finding_context(row)
-            with st.spinner("Copilot is checking the exact finding and connected records..."):
-                try:
-                    st.markdown(copilot_answer(f"Explain {choice} in detail. Start with the exact finding, direct evidence, why it matters, related risks, and safest next step.", context))
-                except Exception as exc:
-                    st.error(f"Copilot error: {exc}")
 
-# -----------------------------------------------------------------------------
-# Inventory & Process
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Inventory & Process":
-    page_header("OPERATIONS", "Inventory & process anomalies", "Review operational exceptions, identify high-impact issues, and inspect the records behind them.")
-    if anomalies.empty:
-        st.success("No inventory/process anomalies.")
-    else:
-        severity_cards(anomalies)
-        c1, c2, c3 = st.columns([1, 1, 1.8])
-        with c1:
-            severity_filter = st.selectbox("Severity", ["All", "Critical", "High", "Medium", "Low"], key="an_severity")
-        with c2:
-            entity_options = ["All"] + sorted(anomalies["entity"].astype(str).dropna().unique().tolist())
-            entity_filter = st.selectbox("Record", entity_options, key="an_entity")
-        with c3:
-            search = st.text_input("Search anomaly", placeholder="ID, issue, record, or explanation", key="an_search")
+# -------------------------------------------------------------------
+# Workbook Copilot
+# -------------------------------------------------------------------
 
-        filtered = anomalies.copy()
-        if severity_filter != "All":
-            filtered = filtered[filtered["severity"].astype(str).str.title() == severity_filter]
-        if entity_filter != "All":
-            filtered = filtered[filtered["entity"].astype(str) == entity_filter]
-        if search.strip():
-            q = search.strip().lower()
-            mask = False
-            for col in ["issue_id", "entity", "title", "detail"]:
-                if col in filtered.columns:
-                    mask = mask | filtered[col].astype(str).str.lower().str.contains(q, na=False)
-            filtered = filtered[mask]
+def copilot_workbook_answer(question: str, dq, anomalies, data, model: str | None = None) -> str:
+    """
+    Workbook-aware Copilot.
 
-        st.caption(f"Showing {len(filtered):,} of {len(anomalies):,} inventory/process anomalies")
-        view = filtered[["issue_id", "severity", "entity", "title", "detail"]].copy()
-        view.columns = ["ID", "Severity", "Record", "Issue", "Explanation"]
-        view["Explanation"] = view["Explanation"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 150)
-        st.dataframe(view, width="stretch", hide_index=True, height=360)
-        st.download_button(
-            "Export anomalies",
-            filtered.to_csv(index=False).encode("utf-8"),
-            "intelliwarehouse_inventory_process_anomalies.csv",
-            "text/csv",
-        )
+    Supports:
+    - exact DQ IDs such as DQ-0102
+    - case-insensitive field questions such as Base UoM/base uom/BASE UOM
+    - material/vendor/delivery/PO questions
+    - broad workbook questions
+    """
 
-        st.markdown("### Explain an inventory / process anomaly")
-        anomaly_choices = (
-            filtered["issue_id"].astype(str).tolist()
-            or anomalies["issue_id"].astype(str).tolist()
-        )
-        anomaly_choice = st.selectbox(
-            "Anomaly",
-            anomaly_choices,
-            key="an_explain_choice",
-        )
+    import pandas as pd
 
-        if st.button(
-            "Explain selected anomaly",
-            type="primary",
-            key="an_explain",
-        ):
-            row = anomalies[
-                anomalies["issue_id"].astype(str).eq(str(anomaly_choice))
-            ].iloc[0]
-            context = build_finding_context(row)
+    dq = dq.copy() if dq is not None else pd.DataFrame()
+    anomalies = anomalies.copy() if anomalies is not None else pd.DataFrame()
+    data = data or {}
 
-            with st.spinner(
-                "Copilot is checking the exact anomaly and connected records..."
-            ):
-                try:
-                    answer = copilot_answer(
-                        (
-                            f"Explain {anomaly_choice} in detail. "
-                            "Start with the exact anomaly, direct workbook evidence, "
-                            "the likely operational cause, why it matters, related "
-                            "inventory/process risks, and the safest next step. "
-                            "Use exact quantities, IDs, statuses and dates from the evidence."
-                        ),
-                        context,
+    q = str(question).strip()
+    qn = _norm(q)
+
+    # ---------------------------------------------------------------
+    # 1. Exact Data Quality finding: "Explain DQ-0102"
+    # ---------------------------------------------------------------
+    finding = _specific_finding(q, dq)
+
+    if finding is not None:
+        entity = str(finding.get("entity", ""))
+
+        direct_records = _rows_for_entity(data, entity)
+
+        # Related DQ findings for the same entity.
+        related_dq = []
+        if not dq.empty:
+            for _, row in dq.iterrows():
+                if (
+                    str(row.get("issue_id", "")) != str(finding.get("issue_id", ""))
+                    and entity
+                    and entity in str(row.get("entity", ""))
+                ):
+                    related_dq.append(row.to_dict())
+
+        # Related anomaly findings for the same entity.
+        related_an = []
+        if not anomalies.empty:
+            for _, row in anomalies.iterrows():
+                if entity and entity in str(row.get("entity", "")):
+                    related_an.append(row.to_dict())
+
+        context = {
+            "question": q,
+            "exact_finding": finding,
+            "direct_workbook_records": direct_records,
+            "related_data_quality_findings": related_dq,
+            "related_anomaly_findings": related_an,
+        }
+
+        if not enabled():
+            lines = [
+                f"### {finding.get('issue_id')} — Detailed Explanation",
+                "",
+                f"**Severity:** {finding.get('severity')}",
+                f"**Record:** {finding.get('entity')}",
+                f"**Issue:** {finding.get('title')}",
+                "",
+                "### What the finding means",
+                str(finding.get("detail", "")),
+                "",
+                "### Exact evidence",
+            ]
+
+            ev = _finding_evidence(finding)
+            for k, v in ev.items():
+                lines.append(f"- **{k}:** {_display(v)}")
+
+            if direct_records:
+                lines.extend(["", "### Direct workbook records"])
+                lines.append(_format_workbook_records(direct_records, max_rows=5))
+
+            if related_dq or related_an:
+                lines.extend(["", "### Related findings"])
+                for r in related_dq[:10]:
+                    lines.append(
+                        f"- {r.get('issue_id')} · {r.get('severity')} · "
+                        f"{r.get('title')}"
                     )
-                    st.markdown(
-                        "<div class='copilot-result-label'>AI COPILOT ANALYSIS</div>",
-                        unsafe_allow_html=True,
+                for r in related_an[:10]:
+                    lines.append(
+                        f"- {r.get('issue_id')} · {r.get('severity')} · "
+                        f"{r.get('title')}"
                     )
-                    st.markdown(answer)
-                except Exception as exc:
-                    st.error(f"Copilot error: {exc}")
 
-# -----------------------------------------------------------------------------
-# Correlated Cases
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Correlated Cases":
-    page_header("OPERATIONS", "Correlated root-cause cases", "Prioritize cross-system cases by severity and impact before opening Root Cause AI.")
-    if cases.empty:
-        st.info("No correlated cases detected.")
-    else:
-        severity_cards(cases)
-        c1, c2, c3 = st.columns([1, 1, 1.8])
-        with c1:
-            severity_filter = st.selectbox("Severity", ["All", "Critical", "High", "Medium", "Low"], key="case_severity")
-        with c2:
-            materials = ["All"] + sorted(cases["material"].astype(str).dropna().unique().tolist())
-            material_filter = st.selectbox("Material", materials, key="case_material")
-        with c3:
-            search = st.text_input("Search case", placeholder="Case ID, material, signal, or root cause", key="case_search")
-
-        filtered = cases.copy()
-        if severity_filter != "All":
-            filtered = filtered[filtered["severity"].astype(str).str.title() == severity_filter]
-        if material_filter != "All":
-            filtered = filtered[filtered["material"].astype(str) == material_filter]
-        if search.strip():
-            q = search.strip().lower()
-            mask = False
-            for col in ["case_id", "material", "signals", "root_cause"]:
-                if col in filtered.columns:
-                    mask = mask | filtered[col].astype(str).str.lower().str.contains(q, na=False)
-            filtered = filtered[mask]
-
-        st.caption(f"Showing {len(filtered):,} of {len(cases):,} correlated cases")
-        view = filtered[["case_id", "material", "severity", "impact_score", "signals", "root_cause", "recommended_action"]].copy()
-        view["signals"] = view["signals"].apply(lambda x: ", ".join(map(str, x)) if isinstance(x, (list, tuple)) else str(x))
-        view["root_cause"] = view["root_cause"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 125)
-        view["recommended_action"] = view["recommended_action"].astype(str).str.replace(r"\s+", " ", regex=True).str.slice(0, 110)
-        view.columns = ["Case", "Material", "Severity", "Impact", "Signals", "Root cause", "Recommended fix"]
-        st.dataframe(view, width="stretch", hide_index=True, height=360)
-        st.download_button("Export correlated cases", filtered.to_csv(index=False).encode("utf-8"), "intelliwarehouse_correlated_cases.csv", "text/csv")
-
-# -----------------------------------------------------------------------------
-# Root Cause AI
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Root Cause AI":
-    page_header(
-        "AI INVESTIGATION",
-        "Root Cause AI",
-        "Select a correlated case, then generate an AI decision brief from the linked evidence.",
-    )
-
-    if cases.empty:
-        st.info("No correlated cases available.")
-    else:
-        labels = [
-            f"{r.case_id} · {r.material} · {r.severity} · {int(r.impact_score)}/100"
-            for _, r in cases.iterrows()
-        ]
-
-        idx = st.selectbox(
-            "Select case",
-            range(len(labels)),
-            format_func=lambda i: labels[i],
-            key="rca_case",
-        )
-        case = cases.iloc[idx].to_dict()
-        cid = str(case.get("case_id", ""))
-        material = str(case.get("material", ""))
-        severity = str(case.get("severity", "Unknown")).title()
-        impact = int(case.get("impact_score", 0) or 0)
-
-        sev_tone = (
-            "critical"
-            if severity.lower() == "critical"
-            else "high"
-            if severity.lower() == "high"
-            else "medium"
-        )
-
-        st.markdown(
-            f"""
-            <div class="rca-case-strip">
-                <div>
-                    <div class="rca-label">SELECTED CASE</div>
-                    <div class="rca-case-id">{cid}</div>
-                    <div class="rca-material">Material · {material}</div>
-                </div>
-                <div class="rca-case-right">
-                    <span class="rca-severity {sev_tone}">{severity}</span>
-                    <span class="rca-impact">Impact <b>{impact}/100</b></span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        signals = case.get("signals", [])
-        if isinstance(signals, (list, tuple)):
-            signals = [str(x).strip() for x in signals if str(x).strip()]
-        elif str(signals).strip():
-            signals = [str(signals).strip()]
-        else:
-            signals = []
-
-        # Evidence context only. Do not show the deterministic root_cause or
-        # recommended_action fields on this page.
-        left, right = st.columns([1.45, 1], gap="medium")
-
-        with left:
-            st.markdown(
-                """
-                <div class="rca-panel rca-evidence">
-                    <div class="rca-panel-head">
-                        <span class="rca-panel-icon">🔎</span>
-                        <div>
-                            <div class="rca-panel-kicker">EVIDENCE INPUT</div>
-                            <div class="rca-panel-title">Signals supplied to AI</div>
-                        </div>
-                    </div>
-                """,
-                unsafe_allow_html=True,
+            lines.extend(
+                [
+                    "",
+                    "### Recommended next step",
+                    "Review the direct workbook records above and resolve the exact data-quality condition before taking corrective action.",
+                ]
             )
-            if signals:
-                for signal in signals[:8]:
-                    st.markdown(
-                        f"<div class='rca-evidence-row'><span class='rca-check'>✓</span><span>{signal}</span></div>",
-                        unsafe_allow_html=True,
+
+            return "\n".join(lines)
+
+        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+
+        prompt = f"""
+Operator question:
+{q}
+
+The operator is asking about ONE SPECIFIC DATA QUALITY FINDING.
+
+Evidence:
+{json.dumps(context, indent=2, default=str)}
+
+Answer with exactly these sections:
+
+### What the finding means
+Explain the exact DQ finding in plain operational language.
+
+### Exact evidence
+Use the exact values from the finding and workbook records.
+
+### Why it matters
+Explain the operational/business risk. Clearly distinguish confirmed facts from inference.
+
+### Related findings
+Only include related findings that are actually supplied. Do not mix them into the root cause of the exact DQ finding.
+
+### Recommended next step
+Give a practical review/remediation proposal. Do not claim execution.
+
+Do not invent any information.
+"""
+
+        return _llm_complete(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
+            model=model,
+        )
+
+    # ---------------------------------------------------------------
+    # 2. Field-level question: "Base UoM", "base uom", "BASE UOM"
+    # ---------------------------------------------------------------
+    field_findings = _field_missing_findings(q, dq, data)
+
+    if field_findings:
+        context = {
+            "question": q,
+            "matched_field_findings": field_findings,
+            "relevant_columns": _question_column_candidates(q, data),
+        }
+
+        if not enabled():
+            lines = [
+                "### Data Quality Field Investigation",
+                "",
+                f"**Question:** {q}",
+                "",
+                f"I found **{len(field_findings)}** data-quality finding(s) related to this field/topic.",
+                "",
+                "### Findings",
+            ]
+
+            for row in field_findings[:50]:
+                lines.append(f"- **{row.get('issue_id')}** · {row.get('severity')} · {row.get('entity')} · {row.get('title')}")
+                lines.append(f"  {row.get('detail')}")
+                ev = _finding_evidence(row)
+                if ev:
+                    lines.append(
+                        "  Actual: " +
+                        " · ".join(
+                            f"{k}={_display(v)}"
+                            for k, v in ev.items()
+                        )
+                    )
+
+            return "\n".join(lines)
+
+        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+
+        prompt = f"""
+Operator question:
+{q}
+
+The operator is asking about a workbook field/topic.
+
+Evidence:
+{json.dumps(context, indent=2, default=str)}
+
+Explain the field/topic using ONLY the evidence.
+
+Treat field names case-insensitively and ignore spaces, punctuation and capitalization.
+For example Base UoM, base uom and BASE UOM are the same field.
+If the field exists in the workbook but is not in the built-in synonym list, use the actual workbook column name as the authority.
+
+Show:
+### Answer
+### Actual findings
+### What the field means operationally
+### Recommended next step
+
+Keep exact issue IDs, records and actual values.
+Do not invent missing records.
+"""
+
+        return _llm_complete(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
+            model=model,
+        )
+
+    # ---------------------------------------------------------------
+    # 3. Material/entity investigation
+    # ---------------------------------------------------------------
+    ids = _extract_ids(q)
+
+    material_id = None
+    for identifier in ids:
+        if identifier.startswith("MAT-"):
+            material_id = identifier
+            break
+
+    if material_id:
+        records = _rows_for_entity(data, material_id)
+
+        related_dq = []
+        related_an = []
+
+        if not dq.empty:
+            related_dq = [
+                r.to_dict()
+                for _, r in dq.iterrows()
+                if material_id in str(r.get("entity", ""))
+            ]
+
+        if not anomalies.empty:
+            related_an = [
+                r.to_dict()
+                for _, r in anomalies.iterrows()
+                if material_id in str(r.get("entity", ""))
+            ]
+
+        context = {
+            "question": q,
+            "material": material_id,
+            "workbook_records": records,
+            "data_quality_findings": related_dq,
+            "anomaly_findings": related_an,
+        }
+
+        if not enabled():
+            lines = [
+                f"### {material_id}",
+                "",
+                "### Connected workbook records",
+                _format_workbook_records(records, max_rows=10)
+                if records
+                else "No connected workbook records found.",
+                "",
+                "### Data Quality findings",
+            ]
+
+            if related_dq:
+                for r in related_dq:
+                    lines.append(
+                        f"- {r.get('issue_id')} · {r.get('severity')} · "
+                        f"{r.get('title')} · {r.get('detail')}"
                     )
             else:
-                st.markdown(
-                    "<div class='rca-muted'>No case-level signals recorded.</div>",
-                    unsafe_allow_html=True,
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+                lines.append("- No related Data Quality findings.")
 
-        with right:
-            linked = [(sheet, rows) for sheet, rows in (case.get("evidence", {}) or {}).items() if rows]
-            total_linked = sum(len(rows) for _, rows in linked)
+            lines.extend(["", "### Anomaly findings"])
 
-            st.markdown(
-                f"""
-                <div class="rca-panel rca-impact-panel">
-                    <div class="rca-panel-head">
-                        <span class="rca-panel-icon">📊</span>
-                        <div>
-                            <div class="rca-panel-kicker">CASE CONTEXT</div>
-                            <div class="rca-panel-title">Impact & evidence coverage</div>
-                        </div>
-                    </div>
-                    <div class="rca-impact-score">{impact}<span>/100</span></div>
-                    <div class="rca-impact-track"><div class="rca-impact-fill" style="width:{max(0,min(100,impact))}%"></div></div>
-                    <div class="rca-context-row">
-                        <span>Linked records</span><b>{total_linked}</b>
-                    </div>
-                    <div class="rca-impact-note">The AI brief is generated from this selected case and its linked evidence.</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            if related_an:
+                for r in related_an:
+                    lines.append(
+                        f"- {r.get('issue_id')} · {r.get('severity')} · "
+                        f"{r.get('title')} · {r.get('detail')}"
+                    )
+            else:
+                lines.append("- No related anomaly findings.")
 
-        st.markdown(
-            """
-            <div class="rca-ai-box">
-                <div class="rca-ai-kicker">GENERATIVE ANALYSIS</div>
-                <div class="rca-ai-title">Generate the case explanation</div>
-                <div class="rca-ai-copy">The deterministic case text is intentionally hidden here. This section is populated only by the live VW Group LLMaaS response.</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+            return "\n".join(lines)
+
+        model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+
+        prompt = f"""
+Operator question:
+{q}
+
+Material investigation:
+{json.dumps(context, indent=2, default=str)}
+
+Answer the operator using only the workbook evidence.
+
+If they ask "what is this material?", provide a concise profile and connected operational records.
+If they ask "what is the issue?", summarize all supplied DQ and anomaly findings.
+If they ask "why is it short?", connect inventory, delivery demand and inbound evidence.
+If they ask what to do, provide a recommendation based on the evidence.
+
+Use exact values and IDs.
+Do not invent information.
+"""
+
+        return _llm_complete(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
+            model=model,
         )
 
-        if st.button(
-            "Generate AI explanation",
-            type="primary",
-            key=f"generate_rca_{cid}",
-            use_container_width=False,
-        ):
-            with st.spinner("Generating Root Cause AI analysis..."):
-                try:
-                    result = generate_root_cause(case)
-                    st.session_state.ai_cache[cid] = result
-                    st.session_state.ai_error = None
-                except Exception as exc:
-                    st.session_state.ai_cache.pop(cid, None)
-                    st.session_state.ai_error = str(exc)
+    # ---------------------------------------------------------------
+    # 4. Broad workbook question
+    # ---------------------------------------------------------------
 
-        if st.session_state.get("ai_error"):
-            st.error(
-                "AI generation failed. No fallback case findings are shown. "
-                f"Details: {st.session_state.ai_error}"
-            )
+    dq_counts = {}
+    if not dq.empty and "title" in dq.columns:
+        dq_counts = dq["title"].value_counts().to_dict()
 
-        if cid in st.session_state.ai_cache:
-            st.markdown(
-                "<div class='ai-output-title'>LIVE AI-GENERATED DECISION BRIEF</div>",
-                unsafe_allow_html=True,
-            )
-            render_rca_ai_output(st.session_state.ai_cache[cid])
-        else:
-            st.markdown(
-                """
-                <div class="rca-awaiting">
-                    <div class="rca-awaiting-icon">✨</div>
-                    <div>
-                        <div class="rca-awaiting-title">AI analysis ready to run</div>
-                        <div class="rca-awaiting-copy">Generate the brief to populate this workspace with the model's root cause, contributing factors, operational impact, recommended action, and confidence.</div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    an_counts = {}
+    if not anomalies.empty and "title" in anomalies.columns:
+        an_counts = anomalies["title"].value_counts().to_dict()
 
-        if linked:
-            with st.expander(f"Supporting records · {total_linked} linked rows"):
-                for sheet, rows in linked:
-                    st.markdown(f"**{sheet}** · {len(rows)} rows")
-                    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    missing_rows = []
 
-# -----------------------------------------------------------------------------
-# Trace Graph
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Trace Graph":
-    page_header("CORRELATION", "Trace Graph", "Follow one material across master data, inventory, storage, deliveries, replenishment, and vendor records.")
-    if cases.empty:
-        st.info("No correlated cases available.")
-    else:
-        material = st.selectbox("Material to trace", cases["material"].astype(str).tolist(), key="trace_material")
-        mm = data["Material_Master"]
-        iv = data["Inventory_Stock"]
-        bb = data["Warehouse_Bin"]
-        dd = data["Deliveries_Dispatch"]
-        pp = data["Purchase_Replenish"]
-        vv = data["Vendor_Master"]
+    if not dq.empty and "title" in dq.columns:
+        mask = dq["title"].astype(str).str.contains(
+            "missing|orphan",
+            case=False,
+            regex=True,
+            na=False
+        )
+        missing_rows = dq.loc[mask].to_dict("records")
 
-        mm1 = mm[mm["Material"].astype(str).eq(material)]
-        iv1 = iv[iv["Material"].astype(str).eq(material)]
-        bb1 = bb[bb["Assigned Material"].astype(str).eq(material)]
-        dd1 = dd[dd["Material"].astype(str).eq(material)]
-        pp1 = pp[pp["Material"].astype(str).eq(material)]
-        vendors = set(pp1["Vendor"].astype(str)) if not pp1.empty and "Vendor" in pp1.columns else set()
-        vv1 = vv[vv["Vendor"].astype(str).isin(vendors)]
-
-        trace_cols = st.columns(6, gap="small")
-        chain = [
-            ("Material", len(mm1)), ("Inventory", len(iv1)), ("Warehouse Bin", len(bb1)),
-            ("Deliveries", len(dd1)), ("Purchase Orders", len(pp1)), ("Vendor", len(vv1)),
-        ]
-        for col, (name, count) in zip(trace_cols, chain):
-            with col:
-                st.markdown(f"<div class='trace-node'><strong>{name}</strong><br><small>{count} linked rows</small></div>", unsafe_allow_html=True)
-        st.markdown("### Connected evidence")
-        datasets = [
-            ("Material Master", mm1), ("Inventory", iv1), ("Warehouse Bins", bb1),
-            ("Deliveries", dd1), ("Purchase Orders", pp1), ("Vendor Master", vv1),
-        ]
-        for title, frame in datasets:
-            with st.expander(f"{title} · {len(frame)} linked rows"):
-                st.dataframe(frame, width="stretch", hide_index=True)
-
-# -----------------------------------------------------------------------------
-# Approvals
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Approvals":
-    page_header("GOVERNED ACTION", "Human approval gate", "The Action Agent proposes. A human decides. Execution remains simulated.")
-    if cases.empty:
-        st.info("No cases awaiting action.")
-    for _, row in cases.iterrows():
-        cid = str(row["case_id"])
-        state = st.session_state.actions.get(cid, {"status": "Pending", "approver": "", "note": "", "action": row["recommended_action"]})
-        with st.expander(f"{cid} · {row['material']} · {row['severity']} · {int(row['impact_score'])}/100"):
-            st.markdown(f"**Root cause:** {row['root_cause']}")
-            action = st.text_area("Proposed action", state["action"], key=f"approval_action_{cid}")
-            approver = st.text_input("Approver name / role", state["approver"], key=f"approval_person_{cid}")
-            note = st.text_area("Decision note", state["note"], key=f"approval_note_{cid}")
-            c1, c2, c3 = st.columns(3)
-            if c1.button("Approve", key=f"approve_{cid}"):
-                if not approver.strip():
-                    st.error("Approver is required.")
-                else:
-                    now = datetime.now().isoformat(timespec="seconds")
-                    st.session_state.actions[cid] = {"status": "Approved", "approver": approver, "note": note, "action": action}
-                    st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Approved", "agent": "Action Agent", "approver": approver, "what": action, "why": row["root_cause"]})
-                    st.rerun()
-            if c2.button("Simulate Execute", key=f"simulate_{cid}"):
-                if not approver.strip():
-                    st.error("Approver is required for simulation.")
-                else:
-                    now = datetime.now().isoformat(timespec="seconds")
-                    st.session_state.actions[cid] = {"status": "Simulated", "approver": approver, "note": note, "action": action}
-                    st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Simulated", "agent": "Action Agent", "approver": approver, "what": action, "why": row["root_cause"]})
-                    st.rerun()
-            if c3.button("Reject", key=f"reject_{cid}"):
-                now = datetime.now().isoformat(timespec="seconds")
-                operator = approver.strip() or "Operator"
-                st.session_state.actions[cid] = {"status": "Rejected", "approver": operator, "note": note, "action": action}
-                st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Rejected", "agent": "Action Agent", "approver": operator, "what": action, "why": row["root_cause"]})
-                st.rerun()
-            st.caption(f"Current status: {state['status']}")
-
-# -----------------------------------------------------------------------------
-# Copilot
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Copilot":
-    page_header("AI ASSISTANT", "AI Warehouse Copilot", "Ask about findings, materials, inventory, deliveries, POs, vendors, or workbook-wide issues.")
-    question = st.text_input(
-        "Ask the warehouse",
-        placeholder="Explain DQ-0102 · Why is MAT-100030 blocked? · How many overdue deliveries?",
-        key="copilot_question",
+    # ---------------------------------------------------------------
+    # Deterministic workbook-wide inventory questions
+    # ---------------------------------------------------------------
+    # Counts/quantities must come from the workbook, not from an LLM
+    # interpretation.  This prevents a broad question such as
+    # "How many expired inventory?" from being answered using the
+    # currently selected material/finding only.
+    asks_expired = (
+        "expired" in qn
+        and any(term in qn for term in [
+            "inventory", "stock", "quantity", "qty", "units",
+            "howmany", "howmuch", "total", "list", "which"
+        ])
     )
-    if question:
-        with st.spinner("Copilot is analyzing the workbook..."):
-            try:
-                st.markdown(copilot_workbook_answer(question, dq, anomalies, data))
-            except Exception as exc:
-                st.error(f"Copilot error: {exc}")
 
-# -----------------------------------------------------------------------------
-# Data Explorer
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Data Explorer":
-    page_header("SOURCE DATA", "Data Explorer", "Inspect the workbook records underlying the AI detections and correlated cases.")
-    visible = [name for name in data if name not in {"README", "Data_Dictionary"}]
-    sheet = st.selectbox("Sheet", visible, key="explorer_sheet")
-    frame = data[sheet]
-    st.caption(f"{len(frame):,} rows · {len(frame.columns):,} columns")
-    st.dataframe(frame, width="stretch", hide_index=True, height=520)
-    st.download_button("Export selected sheet", frame.to_csv(index=False).encode("utf-8"), f"{sheet}.csv", "text/csv")
+    if asks_expired and "expiry" not in qn:
+        inv = data.get("Inventory_Stock")
+        if inv is not None and not inv.empty and {"Material", "Plant", "Qty On Hand", "Batch Expiry"}.issubset(inv.columns):
+            snapshot = pd.Timestamp("2026-09-05")
+            expiry = pd.to_datetime(inv["Batch Expiry"], errors="coerce")
+            qty = pd.to_numeric(inv["Qty On Hand"], errors="coerce").fillna(0)
+            mask = expiry < snapshot
+            # Match the anomaly rule: only expired stock with positive on-hand quantity.
+            expired = inv.loc[mask & (qty > 0), ["Material", "Plant", "Qty On Hand", "Batch Expiry"]].copy()
+            expired["Qty On Hand"] = pd.to_numeric(expired["Qty On Hand"], errors="coerce").fillna(0)
+            expired = expired.sort_values("Batch Expiry")
+            total_qty = int(expired["Qty On Hand"].sum())
 
-# -----------------------------------------------------------------------------
-# Audit
-# -----------------------------------------------------------------------------
-elif st.session_state.active_workspace == "Audit":
-    page_header("GOVERNANCE", "Audit Trail", "Review human decisions and simulated actions recorded during this session.")
-    if st.session_state.audit:
-        st.dataframe(pd.DataFrame(st.session_state.audit), width="stretch", hide_index=True, height=460)
-        st.download_button("Export audit trail", pd.DataFrame(st.session_state.audit).to_csv(index=False).encode("utf-8"), "intelliwarehouse_audit.csv", "text/csv")
-    else:
-        st.info("No human decisions recorded in this session.")
+            lines = [
+                "### Answer",
+                f"There are **{len(expired)} expired inventory records**, totaling **{total_qty:,} units** as of the **2026-09-05 snapshot**.",
+                "",
+                "### Expired inventory",
+            ]
+            for _, r in expired.iterrows():
+                exp = pd.Timestamp(r["Batch Expiry"]).strftime("%Y-%m-%d")
+                lines.append(
+                    f"- **{r['Material']}** · Plant **{r['Plant']}** · **{int(r['Qty On Hand']):,} units** · expired **{exp}**"
+                )
+            lines.extend([
+                "",
+                "### Important",
+                "This is a workbook-wide Copilot answer. It is not limited to the material or finding currently selected elsewhere in the app.",
+            ])
+            return "\n".join(lines)
+
+    asks_missing = any(
+        term in qn
+        for term in [
+            "missingdata",
+            "missingfield",
+            "missingfields",
+            "blankdata",
+            "incompletedata",
+            "datamissing",
+            "missinginformation",
+        ]
+    )
+
+    if asks_missing:
+        lines = [
+            "### Answer",
+            f"The Data Quality Agent found **{len(missing_rows)}** missing/orphan findings under the current validation rules.",
+            "",
+            "### Findings",
+        ]
+
+        for title, count in dq_counts.items():
+            if "missing" in str(title).lower() or "orphan" in str(title).lower():
+                lines.append(f"- **{title}: {count}**")
+
+        lines.extend(["", "### Affected records"])
+
+        for r in missing_rows[:50]:
+            lines.append(
+                f"- **{r.get('issue_id')}** · **{r.get('entity')}** · "
+                f"{r.get('title')}"
+            )
+
+        return "\n".join(lines)
+
+    # For a genuinely general Copilot question, provide the LLM with the
+    # complete loaded workbook, not only the current selection or finding
+    # summaries.  This lets Copilot answer questions such as:
+    # - How many materials/vendors/deliveries/POs are there?
+    # - Which vendors are blocked?
+    # - What is the total stock?
+    # - Which deliveries are overdue?
+    # - Show records matching a material/plant/status/value.
+    # - What are the biggest operational risks?
+    # The deterministic agents still establish DQ/anomaly facts; the LLM
+    # explains and answers the operator's natural-language question.
+    full_workbook = {}
+    for sheet_name, df in data.items():
+        if df is None:
+            continue
+        full_workbook[sheet_name] = df.to_dict("records")
+
+    context = {
+        "question": q,
+        "snapshot_date": "2026-09-05",
+        "data_row_counts": {
+            k: len(v) for k, v in data.items()
+        },
+        "data_quality_findings": dq.to_dict("records") if not dq.empty else [],
+        "anomaly_summary": an_counts,
+        "data_quality_summary": dq_counts,
+        "full_workbook_records": full_workbook,
+    }
+
+    if not enabled():
+        # Give a useful deterministic answer for common general questions
+        # even when the OpenAI key is unavailable.  More complex natural
+        # language questions still need the LLM.
+        inventory = data.get("Inventory_Stock")
+        deliveries = data.get("Deliveries_Dispatch")
+        pos = data.get("Purchase_Replenish")
+        materials = data.get("Material_Master")
+        vendors = data.get("Vendor_Master")
+
+        if any(term in qn for term in ["how many materials", "number of materials", "count of materials"]):
+            return f"### Answer\nThere are **{len(materials) if materials is not None else 0} material master records** in the workbook."
+        if any(term in qn for term in ["how many vendors", "number of vendors", "count of vendors"]):
+            return f"### Answer\nThere are **{len(vendors) if vendors is not None else 0} vendor master records** in the workbook."
+        if any(term in qn for term in ["how many deliveries", "number of deliveries", "count of deliveries"]):
+            return f"### Answer\nThere are **{len(deliveries) if deliveries is not None else 0} delivery records** in the workbook."
+        if any(term in qn for term in ["how many purchase orders", "how many pos", "number of purchase orders", "count of purchase orders"]):
+            return f"### Answer\nThere are **{len(pos) if pos is not None else 0} purchase-order records** in the workbook."
+
+        return (
+            "### Answer\n"
+            f"I checked the loaded workbook. The Data Quality Agent found **{len(dq)}** findings and the Anomaly Agent found **{len(anomalies)}** findings.\n\n"
+            "For general natural-language questions, Copilot uses the complete six-sheet workbook as its evidence source. "
+            "The OpenAI connection is currently unavailable, so I cannot generate the full natural-language answer for this question yet."
+        )
+
+    model = model or _secret("OPENAI_MODEL", "gpt-4.1-mini")
+    prompt = f"""
+Operator question:
+{q}
+
+Complete workbook and control-tower evidence:
+{json.dumps(context, indent=2, default=str)}
+
+You are answering a general-purpose warehouse control-tower Copilot question.
+Use the COMPLETE workbook records above as the primary source. Do not limit the
+answer to the currently selected finding, material, case, or UI element.
+
+You can answer questions about ANY of these six operational sheets:
+Material_Master, Inventory_Stock, Warehouse_Bin, Deliveries_Dispatch,
+Purchase_Replenish, Vendor_Master. Data_Dictionary may be used to explain fields.
+
+Rules:
+- Answer the actual question directly first.
+- Treat field names case-insensitively and understand natural-language synonyms.
+- For counts, totals, averages, comparisons, rankings, or date logic, calculate from the supplied workbook records.
+- For lists, show actual record IDs/materials/vendors and actual values from the workbook.
+- For questions about DQ/anomalies, use the deterministic findings supplied and distinguish confirmed facts from inference.
+- If the operator asks a workbook-wide question, consider ALL relevant rows, not only the selected record.
+- If the operator asks about a specific entity, connect relevant records across sheets when supported by keys.
+- Preserve exact IDs, quantities, statuses, dates and field values.
+- Never invent a record, value, date, relationship, or business rule.
+- If the workbook does not contain enough evidence, say exactly what is missing.
+- Keep the answer concise but useful, with a small table/list when that makes the answer clearer.
+"""
+
+    return _llm_complete(prompt=prompt, system_prompt=SYSTEM_PROMPT, model=model)
+
+
+# -------------------------------------------------------------------
+# Fallbacks
+# -------------------------------------------------------------------
+
+def fallback_root_cause(case):
+    m = case.get("metrics", {}) or {}
+    severity = case.get("severity", "Unknown")
+    impact = case.get("impact_score", 0)
+    demand = m.get("demand", 0)
+    usable = m.get("usable_available", m.get("available", 0))
+    on_hand = m.get("on_hand", 0)
+    blocked = m.get("blocked", 0)
+    shortage = m.get("shortage", 0)
+    overdue = m.get("overdue_deliveries", 0)
+
+    return f"""### Primary Root Cause
+{case.get("root_cause", "The correlated evidence indicates a cross-system operational issue.")}
+
+### Evidence
+- Inventory: physical on-hand {on_hand:,.0f}, blocked {blocked:,.0f}, usable available {usable:,.0f}.
+- Demand: active demand {demand:,.0f}; calculated shortage {shortage:,.0f}.
+- Deliveries: {overdue} active delivery record(s) are overdue.
+- Cross-system evidence: the case contains linked Material Master, Inventory, Warehouse Bin, Delivery, Purchase Replenishment and Vendor records.
+
+### Impact
+{severity} severity with an impact score of {impact}/100. The primary operational effect is insufficient usable stock against demand, with the linked delivery and capacity risks increasing execution exposure.
+
+### Recommended Action
+{case.get("recommended_action", "Review the linked records and correct the underlying issue before execution.")}
+
+### Confidence
+High for the supplied deterministic evidence and linked-record relationships; narrative generation is using the evidence-grounded fallback because VW LLMaaS is unavailable.
+"""
+
+
+def fallback_copilot(question, case):
+    return f"""### Answer
+{case.get("root_cause", "No correlated root cause was found.")}
+
+### Why
+The control tower linked evidence for material **{case.get("material")}** across Material Master, Inventory, Warehouse Bin, Deliveries, Purchase Replenishment and Vendor Master.
+
+### Impact
+**{case.get("severity")} — {case.get("impact_score")}/100**
+
+### Next Step
+{case.get("recommended_action", "Review the linked records before taking action.")}
+
+*LLM is not enabled in this run; this is the evidence-grounded deterministic fallback.*"""
