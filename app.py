@@ -328,6 +328,28 @@ h1,h2,h3,h4 {{ color:#153d66 !important; }}
 .ai-decision-brief-surface .ai-section-body li {{
     color:#26384d !important;
 }}
+
+/* Opaque surfaces for readable AI Copilot and approval content over the warehouse background. */
+.st-key-copilot-surface,
+[class*="st-key-approval-card-"] {
+    background:#ffffff !important;
+    background-color:#ffffff !important;
+    border:1px solid #cbd8e5 !important;
+    border-radius:16px !important;
+    box-shadow:0 10px 28px rgba(24,63,103,.12) !important;
+    padding:18px 20px !important;
+    opacity:1 !important;
+}
+.st-key-copilot-surface * ,
+[class*="st-key-approval-card-"] * {
+    opacity:1 !important;
+}
+.st-key-copilot-surface [data-testid="stMarkdownContainer"],
+[class*="st-key-approval-card-"] [data-testid="stMarkdownContainer"],
+[class*="st-key-approval-card-"] label,
+[class*="st-key-approval-card-"] p {
+    color:#243b55 !important;
+}
 .ai-decision-brief-surface .ai-section-body p {{ margin:.15rem 0 .65rem; }}
 .ai-decision-brief-surface .ai-section-body ul,
 .ai-decision-brief-surface .ai-section-body ol {{ margin:.25rem 0 .3rem 1.2rem; padding-left:1.05rem; }}
@@ -1309,34 +1331,35 @@ elif st.session_state.active_workspace == "Approvals":
         cid = str(row["case_id"])
         state = st.session_state.actions.get(cid, {"status": "Pending", "approver": "", "note": "", "action": row["recommended_action"]})
         with st.expander(f"{cid} · {row['material']} · {row['severity']} · {int(row['impact_score'])}/100"):
-            st.markdown(f"**Root cause:** {row['root_cause']}")
-            action = st.text_area("Proposed action", state["action"], key=f"approval_action_{cid}")
-            approver = st.text_input("Approver name / role", state["approver"], key=f"approval_person_{cid}")
-            note = st.text_area("Decision note", state["note"], key=f"approval_note_{cid}")
-            c1, c2, c3 = st.columns(3)
-            if c1.button("Approve", key=f"approve_{cid}"):
-                if not approver.strip():
-                    st.error("Approver is required.")
-                else:
+            with st.container(key=f"approval-card-{cid}"):
+                st.markdown(f"**Root cause:** {row['root_cause']}")
+                action = st.text_area("Proposed action", state["action"], key=f"approval_action_{cid}")
+                approver = st.text_input("Approver name / role", state["approver"], key=f"approval_person_{cid}")
+                note = st.text_area("Decision note", state["note"], key=f"approval_note_{cid}")
+                c1, c2, c3 = st.columns(3)
+                if c1.button("Approve", key=f"approve_{cid}"):
+                    if not approver.strip():
+                        st.error("Approver is required.")
+                    else:
+                        now = datetime.now().isoformat(timespec="seconds")
+                        st.session_state.actions[cid] = {"status": "Approved", "approver": approver, "note": note, "action": action}
+                        st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Approved", "agent": "Action Agent", "approver": approver, "what": action, "why": row["root_cause"]})
+                        st.rerun()
+                if c2.button("Simulate Execute", key=f"simulate_{cid}"):
+                    if not approver.strip():
+                        st.error("Approver is required for simulation.")
+                    else:
+                        now = datetime.now().isoformat(timespec="seconds")
+                        st.session_state.actions[cid] = {"status": "Simulated", "approver": approver, "note": note, "action": action}
+                        st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Simulated", "agent": "Action Agent", "approver": approver, "what": action, "why": row["root_cause"]})
+                        st.rerun()
+                if c3.button("Reject", key=f"reject_{cid}"):
                     now = datetime.now().isoformat(timespec="seconds")
-                    st.session_state.actions[cid] = {"status": "Approved", "approver": approver, "note": note, "action": action}
-                    st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Approved", "agent": "Action Agent", "approver": approver, "what": action, "why": row["root_cause"]})
+                    operator = approver.strip() or "Operator"
+                    st.session_state.actions[cid] = {"status": "Rejected", "approver": operator, "note": note, "action": action}
+                    st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Rejected", "agent": "Action Agent", "approver": operator, "what": action, "why": row["root_cause"]})
                     st.rerun()
-            if c2.button("Simulate Execute", key=f"simulate_{cid}"):
-                if not approver.strip():
-                    st.error("Approver is required for simulation.")
-                else:
-                    now = datetime.now().isoformat(timespec="seconds")
-                    st.session_state.actions[cid] = {"status": "Simulated", "approver": approver, "note": note, "action": action}
-                    st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Simulated", "agent": "Action Agent", "approver": approver, "what": action, "why": row["root_cause"]})
-                    st.rerun()
-            if c3.button("Reject", key=f"reject_{cid}"):
-                now = datetime.now().isoformat(timespec="seconds")
-                operator = approver.strip() or "Operator"
-                st.session_state.actions[cid] = {"status": "Rejected", "approver": operator, "note": note, "action": action}
-                st.session_state.audit.append({"timestamp": now, "case": cid, "status": "Rejected", "agent": "Action Agent", "approver": operator, "what": action, "why": row["root_cause"]})
-                st.rerun()
-            st.caption(f"Current status: {state['status']}")
+                st.caption(f"Current status: {state['status']}")
 
 # -----------------------------------------------------------------------------
 # Copilot
@@ -1351,9 +1374,12 @@ elif st.session_state.active_workspace == "Copilot":
     if question:
         with st.spinner("Copilot is analyzing the workbook..."):
             try:
-                st.markdown(copilot_workbook_answer(question, dq, anomalies, data))
+                with st.container(key="copilot-surface"):
+                    st.markdown("**AI Copilot response**")
+                    st.markdown(copilot_workbook_answer(question, dq, anomalies, data))
             except Exception as exc:
-                st.error(f"Copilot error: {exc}")
+                with st.container(key="copilot-surface"):
+                    st.error(f"Copilot error: {exc}")
 
 # -----------------------------------------------------------------------------
 # Data Explorer
